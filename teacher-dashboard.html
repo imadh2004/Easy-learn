@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Teacher Dashboard</title>
+<style>
+  body { font-family: Arial; background:#f4f6f8; padding:20px; }
+  h2 { text-align:center; }
+  div.record { background:white; margin:10px; padding:10px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+  button { padding:5px 10px; margin:5px; cursor:pointer; }
+</style>
+</head>
+<body>
+<h2>Teacher Dashboard</h2>
+<h3>Students</h3>
+<div id="studentsList">Loading students...</div>
+<h3>Exams</h3>
+<div id="examsList">Loading exams...</div>
+<button onclick="logout()">Logout</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain: "science-cls.firebaseapp.com",
+  projectId: "science-cls",
+  storageBucket: "science-cls.appspot.com",
+  messagingSenderId: "778012932104",
+  appId: "1:778012932104:web:f997ad31edac581f0b79bd",
+  measurementId: "G-4TCCVY7CKN"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Check if teacher logged in
+onAuthStateChanged(auth, user => {
+  if (!user) window.location.href = 'index.html';
+  else {
+    loadStudents();
+    loadExams();
+  }
+});
+
+// Load students
+async function loadStudents() {
+  const snapshot = await getDocs(collection(db, 'students'));
+  const list = document.getElementById('studentsList');
+  list.innerHTML = '';
+  snapshot.forEach(docSnap => {
+    const student = docSnap.data();
+    const div = document.createElement('div');
+    div.className = 'record';
+    div.innerHTML = `${student.name} (${student.index}) <button onclick="viewRecord('${docSnap.id}')">View Record</button>`;
+    list.appendChild(div);
+  });
+}
+
+// Load exams
+async function loadExams() {
+  const snapshot = await getDocs(collection(db, 'exams'));
+  const list = document.getElementById('examsList');
+  list.innerHTML = '';
+  snapshot.forEach(docSnap => {
+    const exam = docSnap.data();
+    const div = document.createElement('div');
+    div.className = 'record';
+    div.innerHTML = `${exam.title} <button onclick="editExam('${docSnap.id}')">Edit</button>`;
+    list.appendChild(div);
+  });
+}
+
+// View student record
+window.viewRecord = function(studentId) {
+  localStorage.setItem('currentStudentId', studentId);
+  window.location.href = 'student-record.html'; // create this page next
+}
+
+// Edit exam
+window.editExam = function(examId) {
+  localStorage.setItem('currentExamId', examId);
+  window.location.href = 'edit-exam.html'; // create this page next
+}
+
+// Logout
+function logout() {
+  signOut(auth).then(() => { window.location.href = 'index.html'; });
+}
+window.logout = logout;
+</script>
+</body>
+</html>
