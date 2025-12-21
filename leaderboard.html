@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leaderboard</title>
+<style>
+  body { font-family: Arial; background:#f4f6f8; padding:20px; }
+  h2 { text-align:center; margin-bottom:20px; }
+  select { padding:5px; margin-bottom:20px; }
+  table { width:100%; border-collapse: collapse; background:white; }
+  th, td { padding:10px; border:1px solid #ccc; text-align:center; }
+  th { background:#007bff; color:white; }
+  tr.highlight { background: #d1ecf1; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h2>Leaderboard</h2>
+<select id="examSelect">
+  <option value="">Select Exam</option>
+</select>
+
+<table id="leaderboardTable">
+  <thead>
+    <tr>
+      <th>Rank</th>
+      <th>Name</th>
+      <th>Score</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain: "science-cls.firebaseapp.com",
+  projectId: "science-cls",
+  storageBucket: "science-cls.appspot.com",
+  messagingSenderId: "778012932104",
+  appId: "1:778012932104:web:f997ad31edac581f0b79bd",
+  measurementId: "G-4TCCVY7CKN"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUserId = '';
+onAuthStateChanged(auth, user => {
+  if(!user) window.location.href = 'index.html';
+  currentUserId = user.uid;
+  loadExams();
+});
+
+async function loadExams() {
+  const examSelect = document.getElementById('examSelect');
+  const examsSnap = await getDocs(collection(db, "exams"));
+  examsSnap.forEach(docSnap => {
+    const exam = docSnap.data();
+    const opt = document.createElement('option');
+    opt.value = docSnap.id;
+    opt.textContent = exam.title;
+    examSelect.appendChild(opt);
+  });
+
+  examSelect.addEventListener('change', () => {
+    if(examSelect.value) loadLeaderboard(examSelect.value);
+    else clearLeaderboard();
+  });
+}
+
+function clearLeaderboard() {
+  const tbody = document.querySelector('#leaderboardTable tbody');
+  tbody.innerHTML = '';
+}
+
+async function loadLeaderboard(examId) {
+  const usersSnap = await getDocs(collection(db, "users"));
+  let leaderboard = [];
+
+  usersSnap.forEach(docSnap => {
+    const user = docSnap.data();
+    if(user.role === "student") {
+      leaderboard.push({ name: user.name, score: user.attempts?.[examId] || 0, uid: docSnap.id });
+    }
+  });
+
+  leaderboard.sort((a,b)=>b.score - a.score);
+
+  const tbody = document.querySelector('#leaderboardTable tbody');
+  tbody.innerHTML = '';
+
+  leaderboard.forEach((student, index) => {
+    const tr = document.createElement('tr');
+    if(student.uid === currentUserId) tr.className = 'highlight';
+    tr.innerHTML = `<td>${index+1}</td><td>${student.name}</td><td>${student.score}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+</script>
+
+</body>
+</html>
