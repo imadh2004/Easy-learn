@@ -1,75 +1,99 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <title>Student Dashboard</title>
 <style>
-body{font-family:Arial;background:#f4f6f8;padding:20px}
-.exam{background:#fff;padding:15px;margin:10px 0;border-radius:8px}
-button{padding:6px 12px}
+  body { font-family: Arial; background:#f4f6f8; padding:20px; }
+  h2 { text-align:center; }
+  #examsList div { background:white; margin:10px; padding:10px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+  button { padding:5px 10px; margin-top:5px; cursor:pointer; }
 </style>
 </head>
 <body>
-
 <h2>Student Dashboard</h2>
-<button onclick="location.href='leaderboard.html'">Leaderboard</button>
+<div id="examsList">Loading exams...</div>
 <button onclick="logout()">Logout</button>
-
-<div id="exams">Loading exams...</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore,doc,getDoc,collection,getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain: "science-cls.firebaseapp.com",
   projectId: "science-cls",
-  appId: "1:778012932104:web:f997ad31edac581f0b79bd"
+  storageBucket: "science-cls.appspot.com",
+  messagingSenderId: "778012932104",
+  appId: "1:778012932104:web:f997ad31edac581f0b79bd",
+  measurementId: "G-4TCCVY7CKN"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-onAuthStateChanged(auth, async user=>{
-  if(!user){location.href="index.html";return;}
-
-  const studentRef = doc(db,"students",user.uid);
-  const studentSnap = await getDoc(studentRef);
-
-  if(!studentSnap.exists()){
-    alert("Student record not found");
+// Check if student is logged in
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    window.location.href = 'index.html'; // redirect if not logged in
     return;
   }
 
-  const attempts = studentSnap.data().attempts || {};
-  loadExams(attempts);
+  const studentRef = doc(db, "students", user.uid);
+  const studentSnap = await getDoc(studentRef);
+
+  // AUTO-CREATE student document if missing
+  if (!studentSnap.exists()) {
+    await setDoc(studentRef, {
+      name: "New Student",
+      index: "", // teacher can update later
+      attempts: {},
+      createdAt: Date.now()
+    });
+    console.log("Student document created automatically.");
+  }
+
+  // Load exams after ensuring student doc exists
+  loadExams(user.uid);
 });
 
-async function loadExams(attempts){
-  const examsDiv=document.getElementById("exams");
-  examsDiv.innerHTML="";
+// Load exams from Firestore
+async function loadExams(uid) {
+  const examsSnapshot = await getDocs(collection(db, 'exams'));
+  const examsDiv = document.getElementById('examsList');
+  examsDiv.innerHTML = '';
 
-  const examsSnap=await getDocs(collection(db,"exams"));
-  examsSnap.forEach(examDoc=>{
-    const attempted = attempts[examDoc.id]!==undefined;
-    const div=document.createElement("div");
-    div.className="exam";
-    div.innerHTML=`
-      <b>${examDoc.data().title}</b><br>
-      ${attempted?"✅ Attempted":`<button onclick="startExam('${examDoc.id}')">Start Exam</button>`}
-    `;
+  examsSnapshot.forEach(async (docSnap) => {
+    const exam = docSnap.data();
+    const examId = docSnap.id;
+
+    // Check if student already attempted
+    const studentDoc = await getDoc(doc(db, 'students', uid));
+    const attempts = studentDoc.data().attempts || {};
+    const attempted = attempts[examId] ? true : false;
+
+    const div = document.createElement('div');
+    div.innerHTML = `<strong>${exam.title}</strong><br>
+                     ${attempted ? '✅ Already Attempted' : '<button onclick="startExam(\'' + examId + '\')">Start Exam</button>'}`;
     examsDiv.appendChild(div);
   });
 }
 
-window.startExam=id=>{
-  localStorage.setItem("currentExamId",id);
-  location.href="exam.html";
-};
+// Start exam (redirect to exam page)
+window.startExam = function(examId) {
+  localStorage.setItem('currentExamId', examId);
+  window.location.href = 'exam.html';
+}
 
-window.logout=()=>signOut(auth).then(()=>location.href="index.html");
+// Logout
+function logout() {
+  signOut(auth).then(() => { window.location.href = 'index.html'; });
+}
+window.logout = logout;
 </script>
 </body>
 </html>
