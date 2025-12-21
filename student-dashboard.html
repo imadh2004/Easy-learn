@@ -7,13 +7,16 @@
   body { font-family: Arial; background:#f4f6f8; padding:20px; }
   h2 { text-align:center; }
   #examsList div { background:white; margin:10px; padding:10px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-  button { padding:5px 10px; margin-top:5px; cursor:pointer; }
+  button { padding:5px 10px; margin-top:5px; cursor:pointer; margin-right:5px; }
 </style>
 </head>
 <body>
+
 <h2>Student Dashboard</h2>
 <div id="examsList">Loading exams...</div>
+
 <button onclick="logout()">Logout</button>
+<button onclick="goLeaderboard()">🏆 View Leaderboard</button>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
@@ -39,7 +42,7 @@ const db = getFirestore(app);
 // Check if student is logged in
 onAuthStateChanged(auth, async user => {
   if (!user) {
-    window.location.href = 'index.html'; // redirect if not logged in
+    window.location.href = 'index.html';
     return;
   }
 
@@ -50,7 +53,7 @@ onAuthStateChanged(auth, async user => {
   if (!studentSnap.exists()) {
     await setDoc(studentRef, {
       name: "New Student",
-      index: "", // teacher can update later
+      index: "",
       attempts: {},
       createdAt: Date.now()
     });
@@ -94,6 +97,12 @@ function logout() {
   signOut(auth).then(() => { window.location.href = 'index.html'; });
 }
 window.logout = logout;
+
+// Go to leaderboard
+function goLeaderboard() {
+  window.location.href = 'leaderboard.html';
+}
+window.goLeaderboard = goLeaderboard;
 </script>
 </body>
 </html>
