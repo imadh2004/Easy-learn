@@ -18,13 +18,12 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain: "science-cls.firebaseapp.com",
   projectId: "science-cls",
-  storageBucket: "science-cls.appspot.com",
   messagingSenderId: "778012932104",
   appId: "1:778012932104:web:f997ad31edac581f0b79bd"
 };
@@ -35,54 +34,22 @@ const db = getFirestore(app);
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = "index.html";
+    document.body.innerHTML = "❌ Not logged in";
     return;
   }
 
-  console.log("Logged UID:", user.uid);
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
 
-  const userRef = doc(db, "users", user.uid);
-  const userSnap = await getDoc(userRef);
-
-  if (!userSnap.exists()) {
-    alert("User record missing in Firestore");
-    return;
-  }
-
-  const userData = userSnap.data();
-  if (userData.role !== "student") {
-    alert("Access denied: not a student");
-    window.location.href = "index.html";
-    return;
-  }
-
-  loadExams(userData.attempts || {});
-});
-
-async function loadExams(attempts) {
-  const examsDiv = document.getElementById("exams");
-  examsDiv.innerHTML = "";
-
-  const examsSnap = await getDocs(collection(db, "exams"));
-
-  examsSnap.forEach(examDoc => {
-    const exam = examDoc.data();
-    const attempted = attempts[examDoc.id] !== undefined;
-
-    const div = document.createElement("div");
-    div.className = "exam";
-    div.innerHTML = `
-      <b>${exam.title}</b><br>
-      ${attempted ? "✅ Already attempted" : `<button onclick="startExam('${examDoc.id}')">Start Exam</button>`}
+  if (!snap.exists()) {
+    document.body.innerHTML = "❌ Firestore document NOT FOUND";
+  } else {
+    document.body.innerHTML = `
+      ✅ Firestore document FOUND<br>
+      ${JSON.stringify(snap.data(), null, 2)}
     `;
-    examsDiv.appendChild(div);
-  });
-}
-
-window.startExam = (examId) => {
-  localStorage.setItem("currentExamId", examId);
-  location.href = "exam.html";
-};
+  }
+});
 </script>
 
 </body>
