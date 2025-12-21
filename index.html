@@ -2,117 +2,87 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Science Class</title>
+<title>Student Login</title>
 <style>
-  body { font-family: Arial; background:#f4f6f8; display:flex; justify-content:center; align-items:center; min-height:100vh; }
-  .container { text-align:center; }
-  .card, .login-box { background:white; padding:20px; margin:10px; border-radius:10px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
-  .card { cursor:pointer; width:220px; display:inline-block; }
-  .card:hover { transform:scale(1.05); }
-  input { padding:8px; margin:5px; width:200px; }
-  button { padding:8px 15px; margin:5px; cursor:pointer; }
-  #student-login,#teacher-login { display:none; }
+  body { font-family: Arial; background:#f4f6f8; display:flex; justify-content:center; align-items:center; height:100vh; }
+  .login-container { background:white; padding:30px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); width:300px; }
+  input { width:100%; padding:10px; margin:10px 0; border-radius:5px; border:1px solid #ccc; }
+  button { padding:10px; width:100%; border:none; background:#007bff; color:white; border-radius:5px; cursor:pointer; }
+  button:hover { background:#0056b3; }
 </style>
 </head>
 <body>
 
-<div class="container" id="landing">
-  <h1>Grade 10 Online Science Class</h1>
-  <div class="card" id="studentBtn">🎓 <h2>Student</h2><p>Login to take exams</p></div>
-  <div class="card" id="teacherBtn">👨‍🏫 <h2>Teacher</h2><p>Manage students & exams</p></div>
-</div>
-
-<!-- Student Login -->
-<div class="login-box" id="student-login">
+<div class="login-container">
   <h2>Student Login</h2>
-  <input type="email" id="studentEmail" placeholder="Email"><br>
-  <input type="password" id="studentPassword" placeholder="Password"><br>
-  <button id="studentLoginBtn">Login</button><br>
-  <button id="studentBackBtn">Back</button>
-</div>
-
-<!-- Teacher Login -->
-<div class="login-box" id="teacher-login">
-  <h2>Teacher Login</h2>
-  <input type="email" id="teacherEmail" placeholder="Email"><br>
-  <input type="password" id="teacherPassword" placeholder="Password"><br>
-  <button id="teacherLoginBtn">Login</button><br>
-  <button id="teacherBackBtn">Back</button>
+  <input type="text" id="studentName" placeholder="Name with Initials (e.g., J.D. Silva)" required>
+  <input type="text" id="studentIndex" placeholder="Index Number" required>
+  <input type="password" id="studentPassword" placeholder="Password" required>
+  <button onclick="loginStudent()">Login</button>
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-    authDomain: "science-cls.firebaseapp.com",
-    projectId: "science-cls",
-    storageBucket: "science-cls.appspot.com",
-    messagingSenderId: "778012932104",
-    appId: "1:778012932104:web:f997ad31edac581f0b79bd",
-    measurementId: "G-4TCCVY7CKN"
-  };
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain: "science-cls.firebaseapp.com",
+  projectId: "science-cls",
+  storageBucket: "science-cls.appspot.com",
+  messagingSenderId: "778012932104",
+  appId: "1:778012932104:web:f997ad31edac581f0b79bd"
+};
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-  // Navigation functions
-  const landing = document.getElementById('landing');
-  const studentLoginBox = document.getElementById('student-login');
-  const teacherLoginBox = document.getElementById('teacher-login');
+async function loginStudent() {
+  const name = document.getElementById("studentName").value.trim();
+  const index = document.getElementById("studentIndex").value.trim();
+  const password = document.getElementById("studentPassword").value;
 
-  document.getElementById('studentBtn').addEventListener('click', () => {
-    landing.style.display = 'none';
-    studentLoginBox.style.display = 'block';
-  });
+  // Validate name has initials (contains at least one dot)
+  if(!name || !name.includes(".") || !index || !password){
+    alert("Please enter a valid Name with Initials (e.g., J.D. Silva), Index, and Password!");
+    return;
+  }
 
-  document.getElementById('teacherBtn').addEventListener('click', () => {
-    landing.style.display = 'none';
-    teacherLoginBox.style.display = 'block';
-  });
+  try {
+    // Using index as email: index@example.com
+    const email = index + "@example.com";
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const uid = userCredential.user.uid;
 
-  document.getElementById('studentBackBtn').addEventListener('click', () => {
-    landing.style.display = 'block';
-    studentLoginBox.style.display = 'none';
-  });
+    const studentRef = doc(db, "students", uid);
+    const studentSnap = await getDoc(studentRef);
 
-  document.getElementById('teacherBackBtn').addEventListener('click', () => {
-    landing.style.display = 'block';
-    teacherLoginBox.style.display = 'none';
-  });
-
-  // Student Login
-  document.getElementById('studentLoginBtn').addEventListener('click', () => {
-    const email = document.getElementById('studentEmail').value;
-    const password = document.getElementById('studentPassword').value;
-
-    signInWithEmailAndPassword(auth, email, password)
-      .then(userCredential => {
-        alert('Student login successful!');
-        window.location.href = 'student-dashboard.html';
-      })
-      .catch(error => {
-        alert('Error: ' + error.message);
+    if(!studentSnap.exists()){
+      await setDoc(studentRef, {
+        name: name,
+        index: index,
+        attempts: {},
+        createdAt: Date.now()
       });
-  });
+    } else {
+      const studentData = studentSnap.data();
+      if(!studentData.name || studentData.name !== name){
+        await updateDoc(studentRef, { name: name });
+      }
+    }
 
-  // Teacher Login
-  document.getElementById('teacherLoginBtn').addEventListener('click', () => {
-    const email = document.getElementById('teacherEmail').value;
-    const password = document.getElementById('teacherPassword').value;
+    window.location.href = "student-dashboard.html";
 
-    signInWithEmailAndPassword(auth, email, password)
-      .then(userCredential => {
-        alert('Teacher login successful!');
-        window.location.href = 'teacher-dashboard.html';
-      })
-      .catch(error => {
-        alert('Error: ' + error.message);
-      });
-  });
+  } catch(err){
+    console.error(err);
+    alert("Login failed: " + err.message);
+  }
+}
+
+window.loginStudent = loginStudent;
 </script>
 
 </body>
