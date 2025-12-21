@@ -1,56 +1,83 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Student Dashboard</title>
-  <style>
-    body { font-family: Arial; background:#f4f6f8; padding:20px; }
-    .exam { background:#fff; padding:15px; margin:10px 0; border-radius:8px; }
-    button { padding:6px 12px; }
-  </style>
+<meta charset="UTF-8">
+<title>Student Dashboard</title>
+<style>
+  body { font-family: Arial; background:#f4f6f8; padding:20px; }
+  h2 { text-align:center; }
+  #examsList div { background:white; margin:10px; padding:10px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+  button { padding:5px 10px; margin-top:5px; cursor:pointer; }
+</style>
 </head>
 <body>
-
 <h2>Student Dashboard</h2>
-<button onclick="location.href='leaderboard.html'">View Leaderboard</button>
-
-<div id="exams"></div>
+<div id="examsList">Loading exams...</div>
+<button onclick="logout()">Logout</button>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain: "science-cls.firebaseapp.com",
   projectId: "science-cls",
+  storageBucket: "science-cls.appspot.com",
   messagingSenderId: "778012932104",
-  appId: "1:778012932104:web:f997ad31edac581f0b79bd"
+  appId: "1:778012932104:web:f997ad31edac581f0b79bd",
+  measurementId: "G-4TCCVY7CKN"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-onAuthStateChanged(auth, async (user) => {
+// Check if student is logged in
+onAuthStateChanged(auth, user => {
   if (!user) {
-    document.body.innerHTML = "❌ Not logged in";
-    return;
-  }
-
-  const ref = doc(db, "users", user.uid);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) {
-    document.body.innerHTML = "❌ Firestore document NOT FOUND";
+    window.location.href = 'index.html'; // redirect if not logged in
   } else {
-    document.body.innerHTML = `
-      ✅ Firestore document FOUND<br>
-      ${JSON.stringify(snap.data(), null, 2)}
-    `;
+    loadExams(user.uid);
   }
 });
-</script>
 
+// Load exams from Firestore
+async function loadExams(uid) {
+  const examsSnapshot = await getDocs(collection(db, 'exams'));
+  const examsDiv = document.getElementById('examsList');
+  examsDiv.innerHTML = '';
+  
+  examsSnapshot.forEach(async (docSnap) => {
+    const exam = docSnap.data();
+    const examId = docSnap.id;
+    
+    // Check if student already attempted
+    const studentDoc = await getDoc(doc(db, 'students', uid));
+    const attempts = studentDoc.data().attempts || {};
+    const attempted = attempts[examId] ? true : false;
+
+    const div = document.createElement('div');
+    div.innerHTML = `<strong>${exam.title}</strong><br>
+                     ${attempted ? '✅ Already Attempted' : '<button onclick="startExam(\'' + examId + '\')">Start Exam</button>'}`;
+    examsDiv.appendChild(div);
+  });
+}
+
+// Start exam (redirect to exam page)
+window.startExam = function(examId) {
+  localStorage.setItem('currentExamId', examId);
+  window.location.href = 'exam.html';
+}
+
+// Logout
+function logout() {
+  signOut(auth).then(() => { window.location.href = 'index.html'; });
+}
+window.logout = logout;
+</script>
 </body>
 </html>
