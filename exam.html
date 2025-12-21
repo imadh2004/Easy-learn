@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Exam</title>
+<style>
+  body { font-family: Arial; background:#f4f6f8; padding:20px; }
+  h2 { text-align:center; }
+  .question { background:white; margin:10px; padding:10px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+  button { padding:5px 10px; margin-top:10px; cursor:pointer; }
+  #timer { font-size: 18px; text-align:center; margin-bottom:15px; color:red; }
+</style>
+</head>
+<body>
+
+<h2>Exam</h2>
+<div id="timer">Time left: 00:00</div>
+<form id="examForm"></form>
+<button id="submitBtn">Submit Exam</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain: "science-cls.firebaseapp.com",
+  projectId: "science-cls",
+  storageBucket: "science-cls.appspot.com",
+  messagingSenderId: "778012932104",
+  appId: "1:778012932104:web:f997ad31edac581f0b79bd",
+  measurementId: "G-4TCCVY7CKN"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const examId = localStorage.getItem('currentExamId');
+if (!examId) alert("No exam selected");
+
+// Timer
+let timeLeft = 0;
+let timerInterval;
+let studentId = '';
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) window.location.href = 'index.html';
+  studentId = user.uid;
+
+  // Check role
+  const userRef = doc(db, "users", studentId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) { alert("User record not found"); window.location.href='index.html'; return; }
+  const role = userSnap.data().role;
+  if (role !== "student") { alert("Only students can access this page"); window.location.href='index.html'; return; }
+
+  await loadExam();
+});
+
+async function loadExam() {
+  const examRef = doc(db, "exams", examId);
+  const examSnap = await getDoc(examRef);
+  if (!examSnap.exists()) { alert("Exam not found"); return; }
+
+  const exam = examSnap.data();
+
+  // Check if student already attempted
+  const studentRef = doc(db, "users", studentId);
+  const studentSnap = await getDoc(studentRef);
+  const attempts = studentSnap.data().attempts || {};
+  if (attempts[examId] !== undefined) {
+    alert("You have already attempted this exam");
+    window.location.href = 'student-dashboard.html';
+    return;
+  }
+
+  timeLeft = exam.duration * 60; // minutes → seconds
+  const form = document.getElementById('examForm');
+
+  // Render questions
+  exam.questions.forEach((q, index) => {
+    const div = document.createElement('div');
+    div.className = 'question';
+    div.innerHTML = `<p><strong>Q${index+1}: ${q.question}</strong></p>
+      ${q.options.map((opt,i)=>`
+        <label>
+          <input type="radio" name="q${index}" value="${i}"> ${opt}
+        </label><br>`).join('')}`;
+    form.appendChild(div);
+  });
+
+  startTimer();
+}
+
+function startTimer() {
+  const timerDiv = document.getElementById('timer');
+  timerInterval = setInterval(() => {
+    const min = Math.floor(timeLeft / 60);
+    const sec = timeLeft % 60;
+    timerDiv.textContent = `Time left: ${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    timeLeft--;
+    if (timeLeft < 0) {
+      clearInterval(timerInterval);
+      submitExam();
+    }
+  }, 1000);
+}
+
+async function submitExam() {
+  clearInterval(timerInterval);
+  const form = document.getElementById('examForm');
+  const formData = new FormData(form);
+
+  const examRef = doc(db, "exams", examId);
+  const examSnap = await getDoc(examRef);
+  const exam = examSnap.data();
+
+  let score = 0;
+  exam.questions.forEach((q,i)=>{
+    const ans = formData.get(`q${i}`);
+    if (ans !== null && parseInt(ans) === q.answer) score++;
+  });
+
+  // Save score
+  const studentRef = doc(db, "users", studentId);
+  const studentSnap = await getDoc(studentRef);
+  const attempts = studentSnap.data().attempts || {};
+  attempts[examId] = score;
+  await updateDoc(studentRef, { attempts });
+
+  alert(`Exam submitted! Your score: ${score}/${exam.questions.length}`);
+  window.location.href = 'student-dashboard.html';
+}
+
+document.getElementById('submitBtn').addEventListener('click', submitExam);
+</script>
+
+</body>
+</html>
