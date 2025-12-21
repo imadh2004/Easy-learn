@@ -6,19 +6,23 @@
 <style>
   body { font-family: Arial; background:#f4f6f8; padding:20px; }
   h2 { text-align:center; }
-  #examsList div { background:white; margin:10px; padding:10px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-  button { padding:5px 10px; margin-top:5px; cursor:pointer; }
+  #exams { margin-top:20px; }
+  .exam { background:white; margin:10px 0; padding:15px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content: space-between; align-items: center; }
+  button { padding:5px 10px; cursor:pointer; }
+  #leaderboardBtn { margin-bottom:20px; display:block; padding:10px; background:#007bff; color:white; border:none; border-radius:5px; cursor:pointer; }
 </style>
 </head>
 <body>
-<h2>Student Dashboard</h2>
-<div id="examsList">Loading exams...</div>
-<button onclick="logout()">Logout</button>
+
+<h2>Welcome to Student Dashboard</h2>
+<button id="leaderboardBtn">View Leaderboard</button>
+
+<div id="exams"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -31,53 +35,61 @@ const firebaseConfig = {
   measurementId: "G-4TCCVY7CKN"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Check if student is logged in
-onAuthStateChanged(auth, user => {
-  if (!user) {
-    window.location.href = 'index.html'; // redirect if not logged in
-  } else {
-    loadExams(user.uid);
-  }
+let studentId = '';
+onAuthStateChanged(auth, async (user) => {
+  if (!user) window.location.href = 'index.html';
+  studentId = user.uid;
+
+  // Role check
+  const userRef = doc(db, "users", studentId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) { alert("User record not found"); window.location.href='index.html'; return; }
+  const role = userSnap.data().role;
+  if (role !== "student") { alert("Only students can access this page"); window.location.href='index.html'; return; }
+
+  loadExams();
 });
 
 // Load exams from Firestore
-async function loadExams(uid) {
-  const examsSnapshot = await getDocs(collection(db, 'exams'));
-  const examsDiv = document.getElementById('examsList');
+async function loadExams() {
+  const examsCol = collection(db, "exams");
+  const examsSnap = await getDocs(examsCol);
+
+  const studentRef = doc(db, "users", studentId);
+  const studentSnap = await getDoc(studentRef);
+  const attempts = studentSnap.data().attempts || {};
+
+  const examsDiv = document.getElementById('exams');
   examsDiv.innerHTML = '';
-  
-  examsSnapshot.forEach(async (docSnap) => {
-    const exam = docSnap.data();
-    const examId = docSnap.id;
-    
-    // Check if student already attempted
-    const studentDoc = await getDoc(doc(db, 'students', uid));
-    const attempts = studentDoc.data().attempts || {};
-    const attempted = attempts[examId] ? true : false;
+
+  examsSnap.forEach(examDoc => {
+    const exam = examDoc.data();
+    const examId = examDoc.id;
+    const attempted = attempts[examId] !== undefined;
 
     const div = document.createElement('div');
-    div.innerHTML = `<strong>${exam.title}</strong><br>
-                     ${attempted ? '✅ Already Attempted' : '<button onclick="startExam(\'' + examId + '\')">Start Exam</button>'}`;
+    div.className = 'exam';
+    div.innerHTML = `<strong>${exam.title}</strong> 
+      ${attempted ? '<span>✅ Already Attempted</span>' : `<button onclick="startExam('${examId}')">Start Exam</button>`}`;
     examsDiv.appendChild(div);
   });
 }
 
-// Start exam (redirect to exam page)
+// Start exam
 window.startExam = function(examId) {
   localStorage.setItem('currentExamId', examId);
   window.location.href = 'exam.html';
 }
 
-// Logout
-function logout() {
-  signOut(auth).then(() => { window.location.href = 'index.html'; });
-}
-window.logout = logout;
+// Leaderboard button
+document.getElementById('leaderboardBtn').addEventListener('click', () => {
+  window.location.href = 'leaderboard.html';
+});
 </script>
+
 </body>
 </html>
