@@ -1,94 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Student Dashboard</title>
-<style>
-  body { font-family: Arial; background:#f4f6f8; padding:20px; }
-  h2 { text-align:center; }
-  #exams { margin-top:20px; }
-  .exam { background:white; margin:10px 0; padding:15px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content: space-between; align-items: center; }
-  button { padding:5px 10px; cursor:pointer; }
-  #leaderboardBtn { margin-bottom:20px; display:block; padding:10px; background:#007bff; color:white; border:none; border-radius:5px; cursor:pointer; }
-</style>
+  <title>Student Dashboard</title>
+  <style>
+    body { font-family: Arial; background:#f4f6f8; padding:20px; }
+    .exam { background:#fff; padding:15px; margin:10px 0; border-radius:8px; }
+    button { padding:6px 12px; }
+  </style>
 </head>
 <body>
 
-<h2>Welcome to Student Dashboard</h2>
-<button id="leaderboardBtn">View Leaderboard</button>
+<h2>Student Dashboard</h2>
+<button onclick="location.href='leaderboard.html'">View Leaderboard</button>
 
 <div id="exams"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain: "science-cls.firebaseapp.com",
   projectId: "science-cls",
   storageBucket: "science-cls.appspot.com",
   messagingSenderId: "778012932104",
-  appId: "1:778012932104:web:f997ad31edac581f0b79bd",
-  measurementId: "G-4TCCVY7CKN"
+  appId: "1:778012932104:web:f997ad31edac581f0b79bd"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let studentId = '';
 onAuthStateChanged(auth, async (user) => {
-  if (!user) window.location.href = 'index.html';
-  studentId = user.uid;
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
 
-  // Role check
-  const userRef = doc(db, "users", studentId);
+  console.log("Logged UID:", user.uid);
+
+  const userRef = doc(db, "users", user.uid);
   const userSnap = await getDoc(userRef);
-  if (!userSnap.exists()) { alert("User record not found"); window.location.href='index.html'; return; }
-  const role = userSnap.data().role;
-  if (role !== "student") { alert("Only students can access this page"); window.location.href='index.html'; return; }
 
-  loadExams();
+  if (!userSnap.exists()) {
+    alert("User record missing in Firestore");
+    return;
+  }
+
+  const userData = userSnap.data();
+  if (userData.role !== "student") {
+    alert("Access denied: not a student");
+    window.location.href = "index.html";
+    return;
+  }
+
+  loadExams(userData.attempts || {});
 });
 
-// Load exams from Firestore
-async function loadExams() {
-  const examsCol = collection(db, "exams");
-  const examsSnap = await getDocs(examsCol);
+async function loadExams(attempts) {
+  const examsDiv = document.getElementById("exams");
+  examsDiv.innerHTML = "";
 
-  const studentRef = doc(db, "users", studentId);
-  const studentSnap = await getDoc(studentRef);
-  const attempts = studentSnap.data().attempts || {};
-
-  const examsDiv = document.getElementById('exams');
-  examsDiv.innerHTML = '';
+  const examsSnap = await getDocs(collection(db, "exams"));
 
   examsSnap.forEach(examDoc => {
     const exam = examDoc.data();
-    const examId = examDoc.id;
-    const attempted = attempts[examId] !== undefined;
+    const attempted = attempts[examDoc.id] !== undefined;
 
-    const div = document.createElement('div');
-    div.className = 'exam';
-    div.innerHTML = `<strong>${exam.title}</strong> 
-      ${attempted ? '<span>✅ Already Attempted</span>' : `<button onclick="startExam('${examId}')">Start Exam</button>`}`;
+    const div = document.createElement("div");
+    div.className = "exam";
+    div.innerHTML = `
+      <b>${exam.title}</b><br>
+      ${attempted ? "✅ Already attempted" : `<button onclick="startExam('${examDoc.id}')">Start Exam</button>`}
+    `;
     examsDiv.appendChild(div);
   });
 }
 
-// Start exam
-window.startExam = function(examId) {
-  localStorage.setItem('currentExamId', examId);
-  window.location.href = 'exam.html';
-}
-
-// Leaderboard button
-document.getElementById('leaderboardBtn').addEventListener('click', () => {
-  window.location.href = 'leaderboard.html';
-});
+window.startExam = (examId) => {
+  localStorage.setItem("currentExamId", examId);
+  location.href = "exam.html";
+};
 </script>
 
 </body>
