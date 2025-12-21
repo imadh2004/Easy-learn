@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Exam</title>
-  <style>
-    body{font-family:Arial;background:#f4f6f8;padding:20px}
-    .question{background:#fff;padding:15px;margin:10px 0;border-radius:8px}
-    button{padding:6px 12px;margin-top:10px}
-  </style>
+<meta charset="UTF-8">
+<title>Exam</title>
+<style>
+body{font-family:Arial;background:#f4f6f8;padding:20px}
+.question{background:#fff;padding:15px;margin:10px 0;border-radius:8px}
+button{padding:6px 12px;margin-top:10px}
+#timer{font-weight:bold;font-size:20px;color:#007bff;margin-bottom:15px;}
+</style>
 </head>
 <body>
 
 <h2>Exam</h2>
+<div id="timer">Loading timer...</div>
 <div id="examContent">Loading exam...</div>
 
 <script type="module">
@@ -31,87 +33,98 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+let timerInterval;
+
 onAuthStateChanged(auth, async user => {
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
-
+  if (!user) { window.location.href = "index.html"; return; }
   const uid = user.uid;
-  const studentRef = doc(db,"students",uid);
 
-  // AUTO-CREATE student document if missing
+  const studentRef = doc(db,"students",uid);
   const studentSnap = await getDoc(studentRef);
-  if (!studentSnap.exists()) {
+  if(!studentSnap.exists()){
     await setDoc(studentRef,{
-      name: "Unknown Student",
-      index: "",
-      attempts: {},
-      createdAt: Date.now()
+      name:"New Student",
+      index:"",
+      attempts:{},
+      createdAt:Date.now()
     });
-    console.log("Student doc auto-created");
   }
 
   loadExam(uid);
 });
 
-async function loadExam(uid) {
+async function loadExam(uid){
   const examId = localStorage.getItem("currentExamId");
-  if (!examId) {
-    alert("No exam selected");
-    window.location.href = "student-dashboard.html";
-    return;
-  }
+  if(!examId){ alert("No exam selected"); window.location.href="student-dashboard.html"; return; }
 
-  const examRef = doc(db,"exams",examId);
-  const examSnap = await getDoc(examRef);
-
-  if (!examSnap.exists()) {
-    alert("Exam not found");
-    window.location.href = "student-dashboard.html";
-    return;
-  }
+  const examSnap = await getDoc(doc(db,"exams",examId));
+  if(!examSnap.exists()){ alert("Exam not found"); window.location.href="student-dashboard.html"; return; }
 
   const examData = examSnap.data();
 
   // Check if already attempted
   const studentSnap = await getDoc(doc(db,"students",uid));
   const attempts = studentSnap.data().attempts || {};
-  if (attempts[examId]) {
-    alert("You have already attempted this exam");
-    window.location.href = "student-dashboard.html";
-    return;
+  if(attempts[examId]){
+    alert("You already attempted this exam"); window.location.href="student-dashboard.html"; return;
   }
 
   // Render questions
   const container = document.getElementById("examContent");
-  container.innerHTML = `<h3>${examData.title}</h3><p>Duration: ${examData.duration} min</p>`;
+  container.innerHTML = `<h3>${examData.title}</h3>`;
+
   examData.questions.forEach((q,i)=>{
     const div = document.createElement("div");
-    div.className = "question";
-    div.innerHTML = `<b>Q${i+1}: ${q.q}</b><br>` +
+    div.className="question";
+    div.innerHTML=`<b>Q${i+1}: ${q.q}</b><br>` +
       q.options.map((opt,j)=>`<input type="radio" name="q${i}" value="${j}"> ${opt}<br>`).join("");
     container.appendChild(div);
   });
 
   // Submit button
   const submitBtn = document.createElement("button");
-  submitBtn.textContent = "Submit Exam";
-  submitBtn.onclick = async ()=>{
-    let score = 0;
-    examData.questions.forEach((q,i)=>{
-      const selected = document.querySelector(`input[name="q${i}"]:checked`);
-      if(selected && parseInt(selected.value) === q.answer) score++;
-    });
-
-    // Save attempt
-    const studentRef = doc(db,"students",uid);
-    await setDoc(studentRef, { attempts: { [examId]: score } }, { merge:true });
-
-    alert(`Exam submitted! Your score: ${score}`);
-    window.location.href = "student-dashboard.html";
-  };
+  submitBtn.textContent="Submit Exam";
+  submitBtn.onclick = ()=>submitExam(uid,examId,examData.questions);
   container.appendChild(submitBtn);
+
+  // Start timer
+  startTimer(examData.duration, uid, examId, examData.questions);
+}
+
+// Timer function
+function startTimer(durationMinutes, uid, examId, questions){
+  const timerDiv = document.getElementById("timer");
+  let time = durationMinutes * 60; // convert to seconds
+
+  timerInterval = setInterval(()=>{
+    let minutes = Math.floor(time/60);
+    let seconds = time % 60;
+    timerDiv.textContent = `Time Remaining: ${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    time--;
+
+    if(time<0){
+      clearInterval(timerInterval);
+      alert("Time's up! Auto-submitting your exam.");
+      submitExam(uid,examId,questions);
+    }
+  },1000);
+}
+
+// Submit exam function
+async function submitExam(uid,examId,questions){
+  clearInterval(timerInterval); // stop timer
+  let score=0;
+  questions.forEach((q,i)=>{
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    if(selected && parseInt(selected.value)===q.answer) score++;
+  });
+
+  // Save attempt
+  const studentRef = doc(db,"students",uid);
+  await setDoc(studentRef,{attempts:{[examId]:score}},{merge:true});
+
+  alert(`Exam submitted! Your score: ${score}`);
+  window.location.href="student-dashboard.html";
 }
 </script>
 
