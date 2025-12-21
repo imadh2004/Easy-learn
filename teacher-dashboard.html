@@ -1,98 +1,82 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Teacher Dashboard</title>
-<style>
-  body { font-family: Arial; background:#f4f6f8; padding:20px; }
-  h2 { text-align:center; }
-  #students { margin-top:20px; }
-  .student { background:white; margin:10px 0; padding:15px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content: space-between; align-items: center; }
-  button { padding:5px 10px; cursor:pointer; margin-left:5px; }
-  #leaderboardBtn { margin-bottom:20px; display:block; padding:10px; background:#007bff; color:white; border:none; border-radius:5px; cursor:pointer; }
-</style>
+  <title>Teacher Dashboard</title>
+  <style>
+    body { font-family: Arial; background:#f4f6f8; padding:20px; }
+    .student { background:#fff; padding:15px; margin:10px 0; border-radius:8px; }
+    button { margin-left:5px; }
+  </style>
 </head>
 <body>
 
-<h2>Welcome to Teacher Dashboard</h2>
-<button id="leaderboardBtn">View Leaderboard</button>
+<h2>Teacher Dashboard</h2>
+<button onclick="location.href='leaderboard.html'">View Leaderboard</button>
 
 <div id="students"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain: "science-cls.firebaseapp.com",
   projectId: "science-cls",
   storageBucket: "science-cls.appspot.com",
   messagingSenderId: "778012932104",
-  appId: "1:778012932104:web:f997ad31edac581f0b79bd",
-  measurementId: "G-4TCCVY7CKN"
+  appId: "1:778012932104:web:f997ad31edac581f0b79bd"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let teacherId = '';
 onAuthStateChanged(auth, async (user) => {
-  if (!user) window.location.href = 'index.html';
-  teacherId = user.uid;
+  if (!user) {
+    location.href = "index.html";
+    return;
+  }
 
-  // Role check
-  const userRef = doc(db, "users", teacherId);
-  const userSnap = await getDoc(userRef);
-  if (!userSnap.exists()) { alert("User record not found"); window.location.href='index.html'; return; }
-  const role = userSnap.data().role;
-  if (role !== "teacher") { alert("Only teachers can access this page"); window.location.href='index.html'; return; }
+  console.log("Teacher UID:", user.uid);
+
+  const userSnap = await getDoc(doc(db, "users", user.uid));
+  if (!userSnap.exists() || userSnap.data().role !== "teacher") {
+    alert("Access denied");
+    location.href = "index.html";
+    return;
+  }
 
   loadStudents();
 });
 
-// Load students
 async function loadStudents() {
+  const studentsDiv = document.getElementById("students");
+  studentsDiv.innerHTML = "";
+
   const usersSnap = await getDocs(collection(db, "users"));
-  const studentsDiv = document.getElementById('students');
-  studentsDiv.innerHTML = '';
 
   usersSnap.forEach(docSnap => {
-    const user = docSnap.data();
-    if(user.role === "student") {
-      const div = document.createElement('div');
-      div.className = 'student';
-      const attempts = user.attempts || {};
-      const attemptsText = Object.keys(attempts).length === 0 ? 'No attempts yet' :
-        Object.entries(attempts).map(([exam, score]) => `${exam}: ${score}`).join(', ');
-
+    const u = docSnap.data();
+    if (u.role === "student") {
+      const div = document.createElement("div");
+      div.className = "student";
       div.innerHTML = `
-        <span><strong>${user.name}</strong> (Index: ${user.index}) - ${attemptsText}</span>
-        <div>
-          <button onclick="resetAttempts('${docSnap.id}')">Reset Attempts</button>
-        </div>`;
+        <b>${u.name}</b> (Index: ${u.index || "N/A"})<br>
+        Attempts: ${JSON.stringify(u.attempts || {})}
+        <br><button onclick="resetAttempts('${docSnap.id}')">Reset Attempts</button>
+      `;
       studentsDiv.appendChild(div);
     }
   });
 }
 
-// Reset student attempts
-window.resetAttempts = async function(studentId) {
-  const studentRef = doc(db, "users", studentId);
-  const studentSnap = await getDoc(studentRef);
-  if(!studentSnap.exists()) return;
-  await updateDoc(studentRef, { attempts: {} });
-  alert("Attempts reset successfully");
+window.resetAttempts = async (uid) => {
+  await updateDoc(doc(db, "users", uid), { attempts: {} });
+  alert("Attempts reset");
   loadStudents();
-}
-
-// Leaderboard button
-document.getElementById('leaderboardBtn').addEventListener('click', () => {
-  window.location.href = 'leaderboard.html';
-});
+};
 </script>
 
 </body>
