@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Create Exam</title>
+<style>
+body{font-family:Arial;background:#f4f6f8;padding:20px}
+.container{background:#fff;padding:20px;border-radius:10px}
+input,textarea,select{width:100%;margin:5px 0;padding:8px}
+.question{border:1px solid #ccc;padding:10px;margin-top:10px;border-radius:6px}
+button{margin-top:10px;padding:8px 15px}
+</style>
+</head>
+<body>
+
+<h2>Create New Exam</h2>
+<div class="container">
+
+<input id="title" placeholder="Exam Title">
+<input id="duration" type="number" placeholder="Duration (minutes)">
+
+<div id="questions"></div>
+
+<button onclick="addQuestion()">➕ Add Question</button>
+<br><br>
+<button onclick="saveExam()">💾 Save Exam</button>
+<button onclick="location.href='teacher-dashboard.html'">⬅ Back</button>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore,collection,addDoc,doc,getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+const firebaseConfig={
+  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain:"science-cls.firebaseapp.com",
+  projectId:"science-cls",
+  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
+};
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+onAuthStateChanged(auth,async user=>{
+  if(!user){location.href="index.html";return;}
+  const t=await getDoc(doc(db,"teachers",user.uid));
+  if(!t.exists()){alert("Teacher only");location.href="index.html";}
+});
+
+window.addQuestion=()=>{
+  const div=document.createElement("div");
+  div.className="question";
+  div.innerHTML=`
+    <textarea placeholder="Question"></textarea>
+    <input placeholder="Option 1">
+    <input placeholder="Option 2">
+    <input placeholder="Option 3">
+    <input placeholder="Option 4">
+    <select>
+      <option value="0">Correct: Option 1</option>
+      <option value="1">Correct: Option 2</option>
+      <option value="2">Correct: Option 3</option>
+      <option value="3">Correct: Option 4</option>
+    </select>
+  `;
+  document.getElementById("questions").appendChild(div);
+};
+
+window.saveExam=async ()=>{
+  const title=document.getElementById("title").value;
+  const duration=Number(document.getElementById("duration").value);
+  if(!title||!duration){alert("Fill all fields");return;}
+
+  const qs=[];
+  document.querySelectorAll(".question").forEach(q=>{
+    const inputs=q.querySelectorAll("textarea,input,select");
+    qs.push({
+      q: inputs[0].value,
+      options:[inputs[1].value,inputs[2].value,inputs[3].value,inputs[4].value],
+      answer:Number(inputs[5].value)
+    });
+  });
+
+  if(qs.length===0){alert("Add at least one question");return;}
+
+  await addDoc(collection(db,"exams"),{
+    title,
+    duration,
+    questions:qs
+  });
+
+  alert("Exam created successfully");
+  location.href="teacher-dashboard.html";
+};
+</script>
+
+</body>
+</html>
