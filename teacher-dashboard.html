@@ -6,8 +6,8 @@
 <style>
   body { font-family: Arial; background:#f4f6f8; padding:20px; }
   h2, h3, h4 { text-align:center; }
-  input, button, select { padding:8px; margin:5px; }
-  #studentList div, #examsList div { background:white; padding:10px; margin:5px; border-radius:5px; box-shadow:0 1px 5px rgba(0,0,0,0.1); }
+  input, button { padding:8px; margin:5px; }
+  #studentList div, #examsList div, .questionDiv { background:white; padding:10px; margin:5px; border-radius:5px; box-shadow:0 1px 5px rgba(0,0,0,0.1); }
 </style>
 </head>
 <body>
@@ -16,9 +16,26 @@
 
 <!-- Exam Creation Section -->
 <h3>Create Exam</h3>
-<input type="text" id="examTitle" placeholder="Exam Title">
-<input type="number" id="examDuration" placeholder="Duration (minutes)">
-<textarea id="examQuestions" placeholder='Enter questions as JSON, e.g., [{"q":"Q1","options":["A","B","C"],"answer":0}]' style="width:100%;height:80px;"></textarea>
+<input type="text" id="examTitle" placeholder="Exam Title"><br>
+<input type="number" id="examDuration" placeholder="Duration (minutes)"><br>
+
+<div id="questionsContainer">
+  <h4>Questions</h4>
+  <div class="questionDiv">
+    <input type="text" class="questionText" placeholder="Question"><br>
+    <input type="text" class="option1" placeholder="Option A">
+    <input type="text" class="option2" placeholder="Option B">
+    <input type="text" class="option3" placeholder="Option C">
+    <input type="text" class="option4" placeholder="Option D">
+    <select class="answerSelect">
+      <option value="0">A</option>
+      <option value="1">B</option>
+      <option value="2">C</option>
+      <option value="3">D</option>
+    </select>
+  </div>
+</div>
+<button onclick="addQuestion()">Add Another Question</button><br>
 <button onclick="createExam()">Create Exam</button>
 
 <h4>Current Exams</h4>
@@ -39,9 +56,8 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain:"science-cls.firebaseapp.com",
@@ -57,28 +73,66 @@ const db = getFirestore(app);
 
 // --------- EXAM SECTION ---------
 const examsDiv = document.getElementById("examsList");
+const questionsContainer = document.getElementById("questionsContainer");
+
+function addQuestion() {
+  const div = document.createElement("div");
+  div.className = "questionDiv";
+  div.innerHTML = `
+    <input type="text" class="questionText" placeholder="Question"><br>
+    <input type="text" class="option1" placeholder="Option A">
+    <input type="text" class="option2" placeholder="Option B">
+    <input type="text" class="option3" placeholder="Option C">
+    <input type="text" class="option4" placeholder="Option D">
+    <select class="answerSelect">
+      <option value="0">A</option>
+      <option value="1">B</option>
+      <option value="2">C</option>
+      <option value="3">D</option>
+    </select>
+  `;
+  questionsContainer.appendChild(div);
+}
 
 async function createExam(){
   const title = document.getElementById("examTitle").value.trim();
   const duration = parseInt(document.getElementById("examDuration").value);
-  let questions;
-  try { questions = JSON.parse(document.getElementById("examQuestions").value); } 
-  catch(e){ alert("Invalid questions JSON"); return; }
+  if(!title || !duration){ alert("Enter title and duration"); return; }
 
-  if(!title || !duration || !questions){ alert("All fields required"); return; }
-
-  const examRef = doc(collection(db,"exams"));
-  await setDoc(examRef,{
-    title: title,
-    duration: duration,
-    questions: questions,
-    createdAt: Date.now()
+  const questionDivs = document.querySelectorAll(".questionDiv");
+  const questions = [];
+  questionDivs.forEach(div=>{
+    const q = div.querySelector(".questionText").value.trim();
+    const opts = [
+      div.querySelector(".option1").value.trim(),
+      div.querySelector(".option2").value.trim(),
+      div.querySelector(".option3").value.trim(),
+      div.querySelector(".option4").value.trim()
+    ];
+    const ans = parseInt(div.querySelector(".answerSelect").value);
+    if(q && opts.every(o=>o)) questions.push({q, options:opts, answer:ans});
   });
 
+  if(questions.length===0){ alert("Add at least one question"); return; }
+
+  const examRef = doc(collection(db,"exams"));
+  await setDoc(examRef,{title,duration,questions,createdAt:Date.now()});
   alert("Exam created!");
   document.getElementById("examTitle").value='';
   document.getElementById("examDuration").value='';
-  document.getElementById("examQuestions").value='';
+  questionsContainer.innerHTML=`<h4>Questions</h4><div class="questionDiv">
+    <input type="text" class="questionText" placeholder="Question"><br>
+    <input type="text" class="option1" placeholder="Option A">
+    <input type="text" class="option2" placeholder="Option B">
+    <input type="text" class="option3" placeholder="Option C">
+    <input type="text" class="option4" placeholder="Option D">
+    <select class="answerSelect">
+      <option value="0">A</option>
+      <option value="1">B</option>
+      <option value="2">C</option>
+      <option value="3">D</option>
+    </select>
+  </div>`;
   loadExams();
 }
 
@@ -105,35 +159,26 @@ async function loadStudents() {
     const data = snap.data();
     const div = document.createElement("div");
     div.textContent = `${data.name} (${data.index})`;
-    const removeBtn = document.createElement("button");
-    removeBtn.textContent = "Remove";
-    removeBtn.onclick = ()=>removeStudent(snap.id);
-    div.appendChild(removeBtn);
     studentListDiv.appendChild(div);
   });
 }
 
 async function addStudent(){
   const name = document.getElementById("studentName").value.trim();
-  const index = document.getElementById("studentIndex").value.trim();
+  let index = document.getElementById("studentIndex").value.trim();
   const password = document.getElementById("studentPassword").value;
+  if(!name || !index || !password){ alert("All fields required"); return; }
 
-  if(!name || !index || !password){
-    alert("All fields are required!");
-    return;
-  }
-
-  const email = `easylearn(${index})@example.com`;
+  // Join index numbers without parentheses
+  index = index.replace(/\s+/g,''); 
+  const email = `easylearn${index}@example.com`;
 
   try {
     const userCredential = await createUserWithEmailAndPassword(auth,email,password);
     const uid = userCredential.user.uid;
 
     await setDoc(doc(db,"students",uid),{
-      name: name,
-      index: index,
-      attempts: {},
-      createdAt: Date.now()
+      name, index, attempts:{}, createdAt:Date.now()
     });
 
     alert("Student added!");
@@ -141,30 +186,14 @@ async function addStudent(){
     document.getElementById("studentIndex").value='';
     document.getElementById("studentPassword").value='';
     loadStudents();
-
   } catch(err){
     console.error(err);
     alert("Error adding student: " + err.message);
   }
 }
 
-async function removeStudent(uid){
-  if(!confirm("Are you sure you want to remove this student?")) return;
-
-  try {
-    await deleteDoc(doc(db,"students",uid));
-    alert("Student removed. Please remove from Firebase Authentication manually if needed.");
-    loadStudents();
-  } catch(err){
-    console.error(err);
-    alert("Error removing student: " + err.message);
-  }
-}
-
 loadStudents();
-
 window.addStudent = addStudent;
-window.removeStudent = removeStudent;
 
 </script>
 </body>
