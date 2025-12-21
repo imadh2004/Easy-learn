@@ -7,6 +7,7 @@ body{font-family:Arial;background:#f4f6f8;padding:20px}
 table{width:100%;background:#fff;border-collapse:collapse}
 th,td{border:1px solid #ccc;padding:10px;text-align:center}
 th{background:#007bff;color:white}
+select{margin-bottom:10px;padding:5px}
 </style>
 </head>
 <body>
@@ -15,50 +16,73 @@ th{background:#007bff;color:white}
 <select id="examSelect"></select>
 
 <table>
-<thead><tr><th>Rank</th><th>Name</th><th>Score</th></tr></thead>
+<thead>
+  <tr><th>Rank</th><th>Name</th><th>Score</th></tr>
+</thead>
 <tbody id="rows"></tbody>
 </table>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getFirestore,collection,getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-const firebaseConfig={
+// Firebase config
+const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain:"science-cls.firebaseapp.com",
   projectId:"science-cls",
   appId:"1:778012932104:web:f997ad31edac581f0b79bd"
 };
 
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-const examSelect=document.getElementById("examSelect");
-const rows=document.getElementById("rows");
+const examSelect = document.getElementById("examSelect");
+const rows = document.getElementById("rows");
 
-const examsSnap=await getDocs(collection(db,"exams"));
-examsSnap.forEach(e=>{
-  examSelect.innerHTML+=`<option value="${e.id}">${e.data().title}</option>`;
-});
-
-examSelect.onchange=load;
-
-async function load(){
-  rows.innerHTML="";
-  const examId=examSelect.value;
-  let list=[];
-
-  const students=await getDocs(collection(db,"students"));
-  students.forEach(s=>{
-    const d=s.data();
-    list.push({name:d.name,score:d.attempts?.[examId]||0});
+// Fetch exams for dropdown
+async function loadExams(){
+  const examsSnap = await getDocs(collection(db,"exams"));
+  examsSnap.forEach(e=>{
+    examSelect.innerHTML += `<option value="${e.id}">${e.data().title}</option>`;
   });
+  loadLeaderboard();
+}
 
-  list.sort((a,b)=>b.score-a.score);
-  list.forEach((s,i)=>{
-    rows.innerHTML+=`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.score}</td></tr>`;
+examSelect.onchange = loadLeaderboard;
+
+// Load leaderboard in real-time
+let unsubscribe = null;
+
+function loadLeaderboard(){
+  if(unsubscribe) unsubscribe(); // stop previous listener
+
+  const examId = examSelect.value;
+  if(!examId) return;
+
+  const studentsCol = collection(db,"students");
+
+  unsubscribe = onSnapshot(studentsCol, snapshot=>{
+    let list = [];
+    snapshot.forEach(s=>{
+      const d = s.data();
+      const score = Number(d.attempts?.[examId] || 0);
+      list.push({ name: d.name, score });
+    });
+
+    // Sort descending
+    list.sort((a,b)=>b.score - a.score);
+
+    // Render table
+    rows.innerHTML = "";
+    list.forEach((s,i)=>{
+      rows.innerHTML += `<tr><td>${i+1}</td><td>${s.name}</td><td>${s.score}</td></tr>`;
+    });
   });
 }
+
+// Initial load
+loadExams();
 </script>
 </body>
 </html>
