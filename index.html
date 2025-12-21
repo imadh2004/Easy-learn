@@ -15,7 +15,6 @@
 
 <div class="login-container">
   <h2>Student Login</h2>
-  <input type="text" id="studentName" placeholder="Name with Initials (e.g., J.D. Silva)" required>
   <input type="text" id="studentIndex" placeholder="Index Number" required>
   <input type="password" id="studentPassword" placeholder="Password" required>
   <button onclick="loginStudent()">Login</button>
@@ -24,7 +23,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -41,13 +40,11 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 async function loginStudent() {
-  const name = document.getElementById("studentName").value.trim();
   const index = document.getElementById("studentIndex").value.trim();
   const password = document.getElementById("studentPassword").value;
 
-  // Validate name has initials (contains at least one dot)
-  if(!name || !name.includes(".") || !index || !password){
-    alert("Please enter a valid Name with Initials (e.g., J.D. Silva), Index, and Password!");
+  if(!index || !password){
+    alert("Both Index and Password are required!");
     return;
   }
 
@@ -57,23 +54,15 @@ async function loginStudent() {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const uid = userCredential.user.uid;
 
+    // Ensure student document exists
     const studentRef = doc(db, "students", uid);
     const studentSnap = await getDoc(studentRef);
-
     if(!studentSnap.exists()){
-      await setDoc(studentRef, {
-        name: name,
-        index: index,
-        attempts: {},
-        createdAt: Date.now()
-      });
-    } else {
-      const studentData = studentSnap.data();
-      if(!studentData.name || studentData.name !== name){
-        await updateDoc(studentRef, { name: name });
-      }
+      alert("Student record not found. Please contact your teacher.");
+      return;
     }
 
+    // Redirect to dashboard
     window.location.href = "student-dashboard.html";
 
   } catch(err){
