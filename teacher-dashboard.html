@@ -1,83 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Teacher Dashboard</title>
-  <style>
-    body { font-family: Arial; background:#f4f6f8; padding:20px; }
-    .student { background:#fff; padding:15px; margin:10px 0; border-radius:8px; }
-    button { margin-left:5px; }
-  </style>
+<title>Teacher Dashboard</title>
+<style>
+body{font-family:Arial;background:#f4f6f8;padding:20px}
+.student{background:#fff;padding:15px;margin:10px 0;border-radius:8px}
+</style>
 </head>
 <body>
 
 <h2>Teacher Dashboard</h2>
-<button onclick="location.href='leaderboard.html'">View Leaderboard</button>
+<button onclick="location.href='leaderboard.html'">Leaderboard</button>
+<button onclick="logout()">Logout</button>
 
-<div id="students"></div>
+<div id="students">Loading students...</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore,doc,getDoc,collection,getDocs,updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain: "science-cls.firebaseapp.com",
-  projectId: "science-cls",
-  storageBucket: "science-cls.appspot.com",
-  messagingSenderId: "778012932104",
-  appId: "1:778012932104:web:f997ad31edac581f0b79bd"
+const firebaseConfig={
+  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain:"science-cls.firebaseapp.com",
+  projectId:"science-cls",
+  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    location.href = "index.html";
-    return;
-  }
+onAuthStateChanged(auth,async user=>{
+  if(!user){location.href="index.html";return;}
 
-  console.log("Teacher UID:", user.uid);
-
-  const userSnap = await getDoc(doc(db, "users", user.uid));
-  if (!userSnap.exists() || userSnap.data().role !== "teacher") {
-    alert("Access denied");
-    location.href = "index.html";
+  const teacherSnap=await getDoc(doc(db,"teachers",user.uid));
+  if(!teacherSnap.exists()){
+    alert("Teacher access only");
+    location.href="index.html";
     return;
   }
 
   loadStudents();
 });
 
-async function loadStudents() {
-  const studentsDiv = document.getElementById("students");
-  studentsDiv.innerHTML = "";
+async function loadStudents(){
+  const div=document.getElementById("students");
+  div.innerHTML="";
 
-  const usersSnap = await getDocs(collection(db, "users"));
-
-  usersSnap.forEach(docSnap => {
-    const u = docSnap.data();
-    if (u.role === "student") {
-      const div = document.createElement("div");
-      div.className = "student";
-      div.innerHTML = `
-        <b>${u.name}</b> (Index: ${u.index || "N/A"})<br>
-        Attempts: ${JSON.stringify(u.attempts || {})}
-        <br><button onclick="resetAttempts('${docSnap.id}')">Reset Attempts</button>
-      `;
-      studentsDiv.appendChild(div);
-    }
+  const snap=await getDocs(collection(db,"students"));
+  snap.forEach(s=>{
+    const d=s.data();
+    const el=document.createElement("div");
+    el.className="student";
+    el.innerHTML=`
+      <b>${d.name}</b> (${d.index})<br>
+      Attempts: ${JSON.stringify(d.attempts||{})}
+      <br><button onclick="reset('${s.id}')">Reset Attempts</button>
+    `;
+    div.appendChild(el);
   });
 }
 
-window.resetAttempts = async (uid) => {
-  await updateDoc(doc(db, "users", uid), { attempts: {} });
-  alert("Attempts reset");
+window.reset=async uid=>{
+  await updateDoc(doc(db,"students",uid),{attempts:{}});
+  alert("Reset done");
   loadStudents();
 };
-</script>
 
+window.logout=()=>signOut(auth).then(()=>location.href="index.html");
+</script>
 </body>
 </html>
