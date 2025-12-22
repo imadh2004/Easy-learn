@@ -3,182 +3,155 @@
 <head>
 <meta charset="UTF-8">
 <title>Teacher Dashboard</title>
-
-<!-- Chart -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- PDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 <style>
-body { font-family: Arial; background:#f4f6f8; padding:20px; }
-section { background:white; padding:15px; margin:15px 0; border-radius:10px; }
-input, select, button { padding:8px; margin:5px; }
-table { width:100%; border-collapse:collapse; }
-th,td { border:1px solid #ccc; padding:6px; text-align:left; }
+body {
+  font-family: Arial;
+  background:#f4f6f8;
+  padding:20px;
+}
+section {
+  background:white;
+  padding:15px;
+  margin-bottom:20px;
+  border-radius:10px;
+}
+input, button {
+  padding:8px;
+  margin:5px 0;
+  width:250px;
+}
+button { cursor:pointer; }
+h2, h3 { margin-top:0; }
 </style>
 </head>
 <body>
 
 <h2>Teacher Dashboard</h2>
 
-<!-- ================= EXAM CONTROL ================= -->
+<!-- ================= STUDENT REGISTRATION ================= -->
 <section>
-<h3>Exams (Open / Close)</h3>
-<div id="examList"></div>
+<h3>Add Student</h3>
+
+<input id="studentName" placeholder="Name with initials (A.B. Perera)">
+<input id="studentIndex" placeholder="Index Number (numbers only)">
+<input id="studentPassword" type="password" placeholder="Password">
+<br>
+<button onclick="addStudent()">Add Student</button>
+
+<p id="studentMsg"></p>
 </section>
 
-<!-- ================= ANALYTICS ================= -->
+<!-- ================= EXAM CREATION ================= -->
 <section>
-<h3>Exam Analytics</h3>
-<select id="analyticsExam"></select>
-<button onclick="loadAnalytics()">View</button>
-<div id="analytics"></div>
+<h3>Create Exam</h3>
+
+<input id="examTitle" placeholder="Exam Title">
+<input id="examDuration" type="number" placeholder="Duration (minutes)">
+<br>
+<button onclick="createExam()">Create Exam</button>
+
+<p id="examMsg"></p>
 </section>
 
-<!-- ================= STUDENT GRAPH ================= -->
-<section>
-<h3>Student Performance</h3>
-<select id="studentSelect"></select>
-<button onclick="loadStudentPerformance()">View Graph</button>
-<canvas id="chart" width="600" height="300"></canvas>
-</section>
-
-<!-- ================= PDF REPORT ================= -->
-<section>
-<h3>PDF Exam Report</h3>
-<select id="pdfExamSelect"></select>
-<button onclick="generatePDF()">Download PDF</button>
-</section>
+<button onclick="logout()">Logout</button>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, getDoc, updateDoc } 
-from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { 
+  getAuth, onAuthStateChanged, signOut,
+  createUserWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { 
+  getFirestore, doc, setDoc, collection, addDoc, getDoc 
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-const { jsPDF } = window.jspdf;
-
+/* ---------- Firebase Config ---------- */
 const firebaseConfig = {
-  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain:"science-cls.firebaseapp.com",
-  projectId:"science-cls",
-  storageBucket:"science-cls.appspot.com",
-  messagingSenderId:"778012932104",
-  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
+  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain: "science-cls.firebaseapp.com",
+  projectId: "science-cls",
+  storageBucket: "science-cls.appspot.com",
+  messagingSenderId: "778012932104",
+  appId: "1:778012932104:web:f997ad31edac581f0b79bd"
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ---------- Load Exams ---------- */
-async function loadExams() {
-  examList.innerHTML = "";
-  analyticsExam.innerHTML = "";
-  pdfExamSelect.innerHTML = "";
-
-  const snap = await getDocs(collection(db,"exams"));
-  snap.forEach(d=>{
-    const e=d.data();
-    examList.innerHTML += `
-      <div>
-        <b>${e.title}</b> (${e.duration} min)
-        <br>Status: ${e.isActive?"🟢 Open":"🔴 Closed"}
-        <br><button onclick="toggleExam('${d.id}',${e.isActive})">
-        ${e.isActive?"Close":"Open"}
-        </button>
-      </div>
-    `;
-    analyticsExam.innerHTML += `<option value="${d.id}">${e.title}</option>`;
-    pdfExamSelect.innerHTML += `<option value="${d.id}">${e.title}</option>`;
-  });
-}
-
-window.toggleExam = async (id,state)=>{
-  await updateDoc(doc(db,"exams",id),{isActive:!state});
-  loadExams();
-};
-
-/* ---------- Analytics ---------- */
-window.loadAnalytics = async ()=>{
-  const snap = await getDocs(
-    collection(db,"leaderboard",analyticsExam.value,"results")
-  );
-  let scores=[];
-  snap.forEach(d=>scores.push(d.data().score));
-  analytics.innerHTML = scores.length
-    ? `Attempts: ${scores.length}<br>
-       Avg: ${(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(2)}<br>
-       Max: ${Math.max(...scores)}<br>
-       Min: ${Math.min(...scores)}`
-    : "No attempts";
-};
-
-/* ---------- Student Graph ---------- */
-let chart;
-async function loadStudents(){
-  const snap = await getDocs(collection(db,"students"));
-  snap.forEach(d=>{
-    studentSelect.innerHTML += `<option value="${d.id}">
-      ${d.data().name}</option>`;
-  });
-}
-
-window.loadStudentPerformance = async ()=>{
-  let labels=[],data=[];
-  const exams = await getDocs(collection(db,"exams"));
-  for(const e of exams.docs){
-    const r = await getDoc(
-      doc(db,"leaderboard",e.id,"results",studentSelect.value)
-    );
-    if(r.exists()){
-      labels.push(e.data().title);
-      data.push(r.data().score);
-    }
+/* ---------- Role Check ---------- */
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){
+    window.location.href="index.html";
+    return;
   }
-  if(chart) chart.destroy();
-  chart = new Chart(chartCanvas.getContext("2d"),{
-    type:"line",
-    data:{labels,datasets:[{label:"Score",data,borderWidth:3}]},
-    options:{scales:{y:{beginAtZero:true}}}
-  });
-};
+  const snap = await getDoc(doc(db,"teachers",user.uid));
+  if(!snap.exists()){
+    alert("Access denied");
+    signOut(auth);
+  }
+});
 
-/* ---------- PDF REPORT ---------- */
-window.generatePDF = async ()=>{
-  const examId = pdfExamSelect.value;
-  const examSnap = await getDoc(doc(db,"exams",examId));
-  const examTitle = examSnap.data().title;
+/* ---------- Add Student ---------- */
+window.addStudent = async ()=>{
+  const name = studentName.value.trim();
+  const index = studentIndex.value.trim();
+  const password = studentPassword.value;
 
-  const resultsSnap = await getDocs(
-    collection(db,"leaderboard",examId,"results")
-  );
-
-  const pdf = new jsPDF();
-  pdf.text(`Grade 10 Science - Exam Report`, 10, 10);
-  pdf.text(`Exam: ${examTitle}`, 10, 20);
-
-  let y = 30;
-  pdf.text("Name", 10, y);
-  pdf.text("Score", 150, y);
-  y += 8;
-
-  for(const r of resultsSnap.docs){
-    const uid = r.id;
-    const student = await getDoc(doc(db,"students",uid));
-    if(!student.exists()) continue;
-
-    pdf.text(student.data().name, 10, y);
-    pdf.text(String(r.data().score), 150, y);
-    y += 8;
-
-    if(y > 280){ pdf.addPage(); y = 20; }
+  if(!name || !index || !password){
+    studentMsg.innerText="Fill all fields";
+    return;
   }
 
-  pdf.save(`${examTitle}_report.pdf`);
+  const email = `easylearn${index}@example.com`;
+
+  try{
+    const cred = await createUserWithEmailAndPassword(auth,email,password);
+
+    await setDoc(doc(db,"students",cred.user.uid),{
+      name,
+      index,
+      email,
+      role:"student",
+      createdAt:new Date()
+    });
+
+    studentMsg.innerText = "Student added successfully";
+    studentName.value="";
+    studentIndex.value="";
+    studentPassword.value="";
+  }
+  catch(err){
+    studentMsg.innerText = err.message;
+  }
 };
 
-loadExams();
-loadStudents();
+/* ---------- Create Exam ---------- */
+window.createExam = async ()=>{
+  const title = examTitle.value.trim();
+  const duration = examDuration.value;
+
+  if(!title || !duration){
+    examMsg.innerText="Fill all fields";
+    return;
+  }
+
+  await addDoc(collection(db,"exams"),{
+    title,
+    duration:Number(duration),
+    isActive:true,
+    createdAt:new Date()
+  });
+
+  examMsg.innerText="Exam created";
+  examTitle.value="";
+  examDuration.value="";
+};
+
+/* ---------- Logout ---------- */
+window.logout = ()=>{
+  signOut(auth).then(()=>window.location.href="index.html");
+};
 </script>
 
 </body>
