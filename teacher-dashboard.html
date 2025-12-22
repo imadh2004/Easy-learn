@@ -7,7 +7,8 @@
   body { font-family: Arial; background:#f4f6f8; padding:20px; }
   h2, h3, h4 { text-align:center; }
   input, button { padding:8px; margin:5px; }
-  #studentList div, #examsList div, .questionDiv { background:white; padding:10px; margin:5px; border-radius:5px; box-shadow:0 1px 5px rgba(0,0,0,0.1); }
+  #studentList div, #examsList div, .questionDiv { background:white; padding:10px; margin:5px; border-radius:5px; box-shadow:0 1px 5px rgba(0,0,0,0.1); cursor:pointer; }
+  #studentDetails { background:white; padding:15px; margin-top:15px; border-radius:10px; box-shadow:0 1px 5px rgba(0,0,0,0.1); }
 </style>
 </head>
 <body>
@@ -57,6 +58,16 @@
 <h4>Current Students</h4>
 <div id="studentList">Loading students...</div>
 
+<!-- Selected Student Details -->
+<div id="studentDetails" style="display:none;">
+  <h3 id="studentTitle"></h3>
+  <div id="studentExams"></div>
+  <canvas id="studentChart" width="400" height="200"></canvas>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
@@ -75,7 +86,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --------- EXAM SECTION ---------
+// ---------- EXAM SECTION ----------
 const examsDiv = document.getElementById("examsList");
 const questionsContainer = document.getElementById("questionsContainer");
 
@@ -153,8 +164,11 @@ async function loadExams(){
 
 loadExams();
 
-// --------- STUDENT MANAGEMENT SECTION ---------
+// ---------- STUDENT MANAGEMENT ----------
 const studentListDiv = document.getElementById("studentList");
+const studentDetailsDiv = document.getElementById("studentDetails");
+const studentExamsDiv = document.getElementById("studentExams");
+let chartInstance = null;
 
 async function loadStudents() {
   studentListDiv.innerHTML = '';
@@ -163,6 +177,7 @@ async function loadStudents() {
     const data = snap.data();
     const div = document.createElement("div");
     div.textContent = `${data.name} (${data.index})`;
+    div.onclick = ()=>showStudentDetails(snap.id,data.name);
     studentListDiv.appendChild(div);
   });
 }
@@ -173,7 +188,6 @@ async function addStudent(){
   const password = document.getElementById("studentPassword").value;
   if(!name || !index || !password){ alert("All fields required"); return; }
 
-  // Join index numbers without parentheses
   index = index.replace(/\s+/g,''); 
   const email = `easylearn${index}@example.com`;
 
@@ -199,7 +213,53 @@ async function addStudent(){
 loadStudents();
 window.addStudent = addStudent;
 
-// --------- LEADERBOARD NAVIGATION ---------
+// ---------- SHOW STUDENT DETAILS ----------
+async function showStudentDetails(uid,name){
+  studentDetailsDiv.style.display='block';
+  document.getElementById("studentTitle").textContent = `Student: ${name}`;
+  studentExamsDiv.innerHTML = '';
+  
+  const studentDoc = await getDocs(collection(db,"exams")); // get all exams
+  let labels = [];
+  let scores = [];
+
+  for(let examSnap of studentDoc.docs){
+    const examData = examSnap.data();
+    const attempts = (await getDocs(collection(db,"students",uid,"attempts"))).docs;
+    const attempt = attempts.find(a=>a.id===examSnap.id);
+    if(attempt){
+      const scorePercent = attempt.data().score;
+      labels.push(examData.title);
+      scores.push(scorePercent);
+      const div = document.createElement("div");
+      div.textContent = `${examData.title}: ${scorePercent}%`;
+      studentExamsDiv.appendChild(div);
+    }
+  }
+
+  // Draw chart
+  const ctx = document.getElementById("studentChart").getContext("2d");
+  if(chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Exam Scores (%)',
+        data: scores,
+        fill: false,
+        borderColor: 'blue',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { min: 0, max: 100 } }
+    }
+  });
+}
+
+// ---------- LEADERBOARD NAVIGATION ----------
 window.goToLeaderboard = () => {
   window.location.href = "leaderboard.html";
 };
