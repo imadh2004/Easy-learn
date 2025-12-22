@@ -57,37 +57,48 @@ const leaderboardBody = document.getElementById("leaderboardBody");
 
 let examsData = {};
 
-// Load all exams into dropdown
+// Load all exams into dropdown and set default to last exam
 async function loadExams() {
   const examsSnap = await getDocs(collection(db, "exams"));
+  const examsArray = [];
   examsSnap.forEach(docSnap => {
     const data = docSnap.data();
-    examsData[docSnap.id] = data;
+    examsArray.push({id: docSnap.id, ...data});
+  });
+
+  // Sort exams by createdAt ascending
+  examsArray.sort((a,b) => a.createdAt - b.createdAt);
+
+  examsArray.forEach(exam => {
+    examsData[exam.id] = exam;
     const option = document.createElement("option");
-    option.value = docSnap.id;
-    option.textContent = data.title;
+    option.value = exam.id;
+    option.textContent = exam.title;
     examSelect.appendChild(option);
   });
+
+  // Select last exam by default if exists
+  if (examsArray.length > 0) {
+    examSelect.value = examsArray[examsArray.length - 1].id;
+    loadLeaderboard(examsArray[examsArray.length - 1].id);
+  }
 }
 
-examSelect.addEventListener("change", () => {
-  const examId = examSelect.value;
-  if (examId) {
-    loadLeaderboard(examId);
-  } else {
-    leaderboardBody.innerHTML = `<tr><td colspan="3">Select an exam to view leaderboard</td></tr>`;
-  }
-});
-
-// Load leaderboard for selected exam
+// Fetch leaderboard for selected exam
 async function loadLeaderboard(examId) {
   leaderboardBody.innerHTML = 'Loading...';
   const studentsSnap = await getDocs(collection(db, "students"));
   leaderboardBody.innerHTML = '';
 
   const examData = examsData[examId];
+  if (!examData) {
+    leaderboardBody.innerHTML = `<tr><td colspan="3">Exam not found</td></tr>`;
+    return;
+  }
+
   const totalQuestions = examData.questions.length;
 
+  let hasData = false;
   studentsSnap.forEach(studentDoc => {
     const studentData = studentDoc.data();
     const attempts = studentData.attempts || {};
@@ -97,13 +108,24 @@ async function loadLeaderboard(examId) {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${studentData.name}</td><td>${score}/${totalQuestions}</td><td>${percentage}%</td>`;
       leaderboardBody.appendChild(tr);
+      hasData = true;
     }
   });
 
-  if (leaderboardBody.innerHTML === '') {
+  if (!hasData) {
     leaderboardBody.innerHTML = `<tr><td colspan="3">No students have attempted this exam yet.</td></tr>`;
   }
 }
+
+// Change leaderboard when selecting another exam
+examSelect.addEventListener("change", () => {
+  const examId = examSelect.value;
+  if (examId) {
+    loadLeaderboard(examId);
+  } else {
+    leaderboardBody.innerHTML = `<tr><td colspan="3">Select an exam to view leaderboard</td></tr>`;
+  }
+});
 
 // Initialize
 loadExams();
