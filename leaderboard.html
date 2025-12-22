@@ -90,7 +90,17 @@ function loadLeaderboard(){
     let list = [];
     snapshot.forEach(s=>{
       const d = s.data();
-      const score = Number(d.attempts?.[examId]?.score || 0);
+      const attempts = d.attempts || {};
+      let score = 0;
+
+      if(attempts[examId] !== undefined){
+        if(typeof attempts[examId] === "number"){
+          score = attempts[examId]; // old format: number directly
+        } else if(typeof attempts[examId].score === "number"){
+          score = attempts[examId].score; // new format: object with score
+        }
+      }
+
       const percentage = ((score / totalQuestions) * 100).toFixed(2);
       list.push({ name: d.name, score, percentage });
     });
