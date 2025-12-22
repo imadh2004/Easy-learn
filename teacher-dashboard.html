@@ -4,155 +4,197 @@
 <meta charset="UTF-8">
 <title>Teacher Dashboard</title>
 <style>
-body {
-  font-family: Arial;
-  background:#f4f6f8;
-  padding:20px;
-}
-section {
-  background:white;
-  padding:15px;
-  margin-bottom:20px;
-  border-radius:10px;
-}
-input, button {
-  padding:8px;
-  margin:5px 0;
-  width:250px;
-}
-button { cursor:pointer; }
-h2, h3 { margin-top:0; }
+  body { font-family: Arial; background:#f4f6f8; padding:20px; }
+  h2, h3, h4 { text-align:center; }
+  input, button { padding:8px; margin:5px; }
+  #studentList div, #examsList div, .questionDiv { background:white; padding:10px; margin:5px; border-radius:5px; box-shadow:0 1px 5px rgba(0,0,0,0.1); }
 </style>
 </head>
 <body>
 
 <h2>Teacher Dashboard</h2>
 
-<!-- ================= STUDENT REGISTRATION ================= -->
-<section>
-<h3>Add Student</h3>
-
-<input id="studentName" placeholder="Name with initials (A.B. Perera)">
-<input id="studentIndex" placeholder="Index Number (numbers only)">
-<input id="studentPassword" type="password" placeholder="Password">
-<br>
-<button onclick="addStudent()">Add Student</button>
-
-<p id="studentMsg"></p>
-</section>
-
-<!-- ================= EXAM CREATION ================= -->
-<section>
+<!-- Exam Creation Section -->
 <h3>Create Exam</h3>
+<input type="text" id="examTitle" placeholder="Exam Title"><br>
+<input type="number" id="examDuration" placeholder="Duration (minutes)"><br>
 
-<input id="examTitle" placeholder="Exam Title">
-<input id="examDuration" type="number" placeholder="Duration (minutes)">
-<br>
+<div id="questionsContainer">
+  <h4>Questions</h4>
+  <div class="questionDiv">
+    <input type="text" class="questionText" placeholder="Question"><br>
+    <input type="text" class="option1" placeholder="Option A">
+    <input type="text" class="option2" placeholder="Option B">
+    <input type="text" class="option3" placeholder="Option C">
+    <input type="text" class="option4" placeholder="Option D">
+    <select class="answerSelect">
+      <option value="0">A</option>
+      <option value="1">B</option>
+      <option value="2">C</option>
+      <option value="3">D</option>
+    </select>
+  </div>
+</div>
+<button onclick="addQuestion()">Add Another Question</button><br>
 <button onclick="createExam()">Create Exam</button>
 
-<p id="examMsg"></p>
-</section>
+<h4>Current Exams</h4>
+<div id="examsList">Loading exams...</div>
 
-<button onclick="logout()">Logout</button>
+<hr>
+
+<!-- Student Management Section -->
+<h3>Student Management</h3>
+<input type="text" id="studentName" placeholder="Name with Initials">
+<input type="text" id="studentIndex" placeholder="Index Number">
+<input type="password" id="studentPassword" placeholder="Password">
+<button onclick="addStudent()">Add Student</button>
+
+<h4>Current Students</h4>
+<div id="studentList">Loading students...</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { 
-  getAuth, onAuthStateChanged, signOut,
-  createUserWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { 
-  getFirestore, doc, setDoc, collection, addDoc, getDoc 
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-/* ---------- Firebase Config ---------- */
 const firebaseConfig = {
-  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain: "science-cls.firebaseapp.com",
-  projectId: "science-cls",
-  storageBucket: "science-cls.appspot.com",
-  messagingSenderId: "778012932104",
-  appId: "1:778012932104:web:f997ad31edac581f0b79bd"
+  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain:"science-cls.firebaseapp.com",
+  projectId:"science-cls",
+  storageBucket:"science-cls.appspot.com",
+  messagingSenderId:"778012932104",
+  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ---------- Role Check ---------- */
-onAuthStateChanged(auth, async (user)=>{
-  if(!user){
-    window.location.href="index.html";
-    return;
-  }
-  const snap = await getDoc(doc(db,"teachers",user.uid));
-  if(!snap.exists()){
-    alert("Access denied");
-    signOut(auth);
-  }
-});
+// --------- EXAM SECTION ---------
+const examsDiv = document.getElementById("examsList");
+const questionsContainer = document.getElementById("questionsContainer");
 
-/* ---------- Add Student ---------- */
-window.addStudent = async ()=>{
-  const name = studentName.value.trim();
-  const index = studentIndex.value.trim();
-  const password = studentPassword.value;
+function addQuestion() {
+  const div = document.createElement("div");
+  div.className = "questionDiv";
+  div.innerHTML = `
+    <input type="text" class="questionText" placeholder="Question"><br>
+    <input type="text" class="option1" placeholder="Option A">
+    <input type="text" class="option2" placeholder="Option B">
+    <input type="text" class="option3" placeholder="Option C">
+    <input type="text" class="option4" placeholder="Option D">
+    <select class="answerSelect">
+      <option value="0">A</option>
+      <option value="1">B</option>
+      <option value="2">C</option>
+      <option value="3">D</option>
+    </select>
+  `;
+  questionsContainer.appendChild(div);
+}
 
-  if(!name || !index || !password){
-    studentMsg.innerText="Fill all fields";
-    return;
-  }
+async function createExam(){
+  const title = document.getElementById("examTitle").value.trim();
+  const duration = parseInt(document.getElementById("examDuration").value);
+  if(!title || !duration){ alert("Enter title and duration"); return; }
 
-  const email = `easylearn${index}@example.com`;
-
-  try{
-    const cred = await createUserWithEmailAndPassword(auth,email,password);
-
-    await setDoc(doc(db,"students",cred.user.uid),{
-      name,
-      index,
-      email,
-      role:"student",
-      createdAt:new Date()
-    });
-
-    studentMsg.innerText = "Student added successfully";
-    studentName.value="";
-    studentIndex.value="";
-    studentPassword.value="";
-  }
-  catch(err){
-    studentMsg.innerText = err.message;
-  }
-};
-
-/* ---------- Create Exam ---------- */
-window.createExam = async ()=>{
-  const title = examTitle.value.trim();
-  const duration = examDuration.value;
-
-  if(!title || !duration){
-    examMsg.innerText="Fill all fields";
-    return;
-  }
-
-  await addDoc(collection(db,"exams"),{
-    title,
-    duration:Number(duration),
-    isActive:true,
-    createdAt:new Date()
+  const questionDivs = document.querySelectorAll(".questionDiv");
+  const questions = [];
+  questionDivs.forEach(div=>{
+    const q = div.querySelector(".questionText").value.trim();
+    const opts = [
+      div.querySelector(".option1").value.trim(),
+      div.querySelector(".option2").value.trim(),
+      div.querySelector(".option3").value.trim(),
+      div.querySelector(".option4").value.trim()
+    ];
+    const ans = parseInt(div.querySelector(".answerSelect").value);
+    if(q && opts.every(o=>o)) questions.push({q, options:opts, answer:ans});
   });
 
-  examMsg.innerText="Exam created";
-  examTitle.value="";
-  examDuration.value="";
-};
+  if(questions.length===0){ alert("Add at least one question"); return; }
 
-/* ---------- Logout ---------- */
-window.logout = ()=>{
-  signOut(auth).then(()=>window.location.href="index.html");
-};
+  const examRef = doc(collection(db,"exams"));
+  await setDoc(examRef,{title,duration,questions,createdAt:Date.now()});
+  alert("Exam created!");
+  document.getElementById("examTitle").value='';
+  document.getElementById("examDuration").value='';
+  questionsContainer.innerHTML=`<h4>Questions</h4><div class="questionDiv">
+    <input type="text" class="questionText" placeholder="Question"><br>
+    <input type="text" class="option1" placeholder="Option A">
+    <input type="text" class="option2" placeholder="Option B">
+    <input type="text" class="option3" placeholder="Option C">
+    <input type="text" class="option4" placeholder="Option D">
+    <select class="answerSelect">
+      <option value="0">A</option>
+      <option value="1">B</option>
+      <option value="2">C</option>
+      <option value="3">D</option>
+    </select>
+  </div>`;
+  loadExams();
+}
+
+async function loadExams(){
+  examsDiv.innerHTML='';
+  const snapshot = await getDocs(collection(db,"exams"));
+  snapshot.forEach(snap=>{
+    const data = snap.data();
+    const div = document.createElement("div");
+    div.textContent = `${data.title} - Duration: ${data.duration} min`;
+    examsDiv.appendChild(div);
+  });
+}
+
+loadExams();
+
+// --------- STUDENT MANAGEMENT SECTION ---------
+const studentListDiv = document.getElementById("studentList");
+
+async function loadStudents() {
+  studentListDiv.innerHTML = '';
+  const studentsSnap = await getDocs(collection(db,"students"));
+  studentsSnap.forEach(snap=>{
+    const data = snap.data();
+    const div = document.createElement("div");
+    div.textContent = `${data.name} (${data.index})`;
+    studentListDiv.appendChild(div);
+  });
+}
+
+async function addStudent(){
+  const name = document.getElementById("studentName").value.trim();
+  let index = document.getElementById("studentIndex").value.trim();
+  const password = document.getElementById("studentPassword").value;
+  if(!name || !index || !password){ alert("All fields required"); return; }
+
+  // Join index numbers without parentheses
+  index = index.replace(/\s+/g,''); 
+  const email = `easylearn${index}@example.com`;
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth,email,password);
+    const uid = userCredential.user.uid;
+
+    await setDoc(doc(db,"students",uid),{
+      name, index, attempts:{}, createdAt:Date.now()
+    });
+
+    alert("Student added!");
+    document.getElementById("studentName").value='';
+    document.getElementById("studentIndex").value='';
+    document.getElementById("studentPassword").value='';
+    loadStudents();
+  } catch(err){
+    console.error(err);
+    alert("Error adding student: " + err.message);
+  }
+}
+
+loadStudents();
+window.addStudent = addStudent;
+
 </script>
-
 </body>
 </html>
