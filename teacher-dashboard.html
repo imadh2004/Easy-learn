@@ -153,8 +153,10 @@ async function createExam(){
   loadExams();
 }
 
-async function toggleExam(examId, currentStatus){
+async function toggleExam(examId){
   const examRef = doc(db,"exams",examId);
+  const examSnap = await getDoc(examRef);
+  const currentStatus = examSnap.data().active;
   await updateDoc(examRef,{active: !currentStatus});
   loadExams();
 }
@@ -162,19 +164,23 @@ async function toggleExam(examId, currentStatus){
 async function loadExams(){
   examsDiv.innerHTML='';
   const snapshot = await getDocs(collection(db,"exams"));
+  // Sort by createdAt
+  const exams = [];
   snapshot.forEach(snap=>{
-    const data = snap.data();
+    exams.push({id:snap.id, ...snap.data()});
+  });
+  exams.sort((a,b)=>a.createdAt - b.createdAt);
+
+  exams.forEach(exam=>{
     const div = document.createElement("div");
     div.className = "examDiv";
 
     const titleSpan = document.createElement("span");
-    titleSpan.textContent = `${data.title} - Duration: ${data.duration} min - ${data.active ? "🟢 Active" : "🔴 Inactive"}`;
+    titleSpan.textContent = `${exam.title} - Duration: ${exam.duration} min - ${exam.active ? "🟢 Active" : "🔴 Inactive"}`;
 
     const btn = document.createElement("button");
-    btn.textContent = data.active ? "Stop" : "Start";
-    btn.addEventListener('click', async ()=>{
-      await toggleExam(snap.id, data.active);
-    });
+    btn.textContent = exam.active ? "Stop" : "Start";
+    btn.addEventListener('click', async ()=>toggleExam(exam.id));
 
     const btnContainer = document.createElement("div");
     btnContainer.appendChild(btn);
@@ -249,11 +255,19 @@ async function showStudentDetails(uid,name){
   }
 
   const attempts = studentData.attempts;
+  const entries = Object.entries(attempts);
+
+  // Sort by exam creation time
+  entries.sort(async ([examIdA],[examIdB]) => {
+    const examA = await getDoc(doc(db,"exams",examIdA));
+    const examB = await getDoc(doc(db,"exams",examIdB));
+    return examA.data().createdAt - examB.data().createdAt;
+  });
+
   const labels = [];
   const scores = [];
 
-  for(const examId in attempts){
-    const rawScore = attempts[examId];
+  for(const [examId, rawScore] of entries){
     const examSnap = await getDoc(doc(db,"exams",examId));
     if(examSnap.exists()){
       const examData = examSnap.data();
