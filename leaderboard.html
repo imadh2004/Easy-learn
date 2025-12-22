@@ -7,12 +7,13 @@ body{font-family:Arial;background:#f4f6f8;padding:20px}
 table{width:100%;background:#fff;border-collapse:collapse}
 th,td{border:1px solid #ccc;padding:10px;text-align:center}
 th{background:#007bff;color:white}
-select{margin-bottom:10px;padding:5px}
+select{margin-bottom:10px;padding:6px}
 </style>
 </head>
 <body>
 
 <h2>Leaderboard</h2>
+
 <select id="examSelect"></select>
 
 <table>
@@ -29,9 +30,16 @@ select{margin-bottom:10px;padding:5px}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getFirestore, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { 
+  getFirestore,
+  collection,
+  getDocs,
+  onSnapshot,
+  query,
+  orderBy
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-// Firebase config
+/* ---------------- FIREBASE ---------------- */
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain:"science-cls.firebaseapp.com",
@@ -42,61 +50,65 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+/* ---------------- DOM ---------------- */
 const examSelect = document.getElementById("examSelect");
 const rows = document.getElementById("rows");
 
-let examsData = {};
-let examsOrdered = [];
-
-async function loadExams(){
-  const examsSnap = await getDocs(collection(db,"exams"));
-  examsOrdered = [];
-
-  examsSnap.forEach(docSnap=>{
-    const data = docSnap.data();
-    examsData[docSnap.id] = data;
-    examsOrdered.push({
-      id: docSnap.id,
-      title: data.title,
-      createdAt: data.createdAt || 0
-    });
-  });
-
-  // ✅ SORT BY CREATED TIME
-  examsOrdered.sort((a,b)=>a.createdAt - b.createdAt);
-
-  examSelect.innerHTML = "";
-  examsOrdered.forEach(e=>{
-    examSelect.innerHTML += `<option value="${e.id}">${e.title}</option>`;
-  });
-
-  // ✅ SELECT LAST EXAM BY DEFAULT
-  if(examsOrdered.length > 0){
-    examSelect.value = examsOrdered[examsOrdered.length - 1].id;
-    loadLeaderboard();
-  }
-}
-
-examSelect.onchange = loadLeaderboard;
-
+let examsCache = {};
 let unsubscribe = null;
 
+/* ---------------- LOAD EXAMS (ORDERED) ---------------- */
+async function loadExams(){
+  examSelect.innerHTML = "";
+  examsCache = {};
+
+  // ✅ ORDER BY createdAt (NEWEST FIRST)
+  const q = query(
+    collection(db,"exams"),
+    orderBy("createdAt","desc")
+  );
+
+  const snap = await getDocs(q);
+
+  if(snap.empty){
+    examSelect.innerHTML = `<option>No exams</option>`;
+    return;
+  }
+
+  snap.forEach(docSnap=>{
+    const data = docSnap.data();
+    examsCache[docSnap.id] = data;
+
+    const opt = document.createElement("option");
+    opt.value = docSnap.id;
+    opt.textContent = data.title;
+    examSelect.appendChild(opt);
+  });
+
+  // ✅ FIRST OPTION IS LATEST EXAM
+  examSelect.selectedIndex = 0;
+  loadLeaderboard();
+}
+
+examSelect.addEventListener("change", loadLeaderboard);
+
+/* ---------------- LOAD LEADERBOARD ---------------- */
 function loadLeaderboard(){
   if(unsubscribe) unsubscribe();
 
   const examId = examSelect.value;
   if(!examId) return;
 
-  const totalQuestions = examsData[examId]?.questions?.length || 1;
+  const totalQuestions = examsCache[examId]?.questions?.length || 1;
 
   unsubscribe = onSnapshot(collection(db,"students"), snap=>{
     let list = [];
 
-    snap.forEach(s=>{
-      const d = s.data();
+    snap.forEach(docSnap=>{
+      const d = docSnap.data();
       let score = 0;
 
-      if(d.attempts && d.attempts[examId] !== undefined){
+      if(d.attempts && d.attempts[examId]){
         if(typeof d.attempts[examId] === "number"){
           score = d.attempts[examId];
         } else if(typeof d.attempts[examId].score === "number"){
@@ -105,14 +117,14 @@ function loadLeaderboard(){
       }
 
       const percentage = ((score / totalQuestions) * 100).toFixed(2);
-      list.push({name:d.name, score, percentage});
+      list.push({ name:d.name, score, percentage });
     });
 
     list.sort((a,b)=>b.score - a.score);
 
     rows.innerHTML = "";
     if(list.length === 0){
-      rows.innerHTML = `<tr><td colspan="4">No attempts yet</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="4">No results</td></tr>`;
       return;
     }
 
@@ -123,11 +135,13 @@ function loadLeaderboard(){
           <td>${s.name}</td>
           <td>${s.score}</td>
           <td>${s.percentage}%</td>
-        </tr>`;
+        </tr>
+      `;
     });
   });
 }
 
+/* ---------------- INIT ---------------- */
 loadExams();
 </script>
 
