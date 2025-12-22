@@ -46,35 +46,39 @@ const examSelect = document.getElementById("examSelect");
 const rows = document.getElementById("rows");
 
 let examsData = {};
-let examOrder = [];
+let examsOrdered = [];
 
-// Fetch exams for dropdown and store questions length
 async function loadExams(){
   const examsSnap = await getDocs(collection(db,"exams"));
-  examsSnap.forEach(e=>{
-    const data = e.data();
-    examsData[e.id] = data;
-    examOrder.push({id: e.id, createdAt: data.createdAt});
+  examsOrdered = [];
+
+  examsSnap.forEach(docSnap=>{
+    const data = docSnap.data();
+    examsData[docSnap.id] = data;
+    examsOrdered.push({
+      id: docSnap.id,
+      title: data.title,
+      createdAt: data.createdAt || 0
+    });
   });
 
-  // Sort by createdAt ascending
-  examOrder.sort((a,b) => a.createdAt - b.createdAt);
+  // ✅ SORT BY CREATED TIME
+  examsOrdered.sort((a,b)=>a.createdAt - b.createdAt);
 
-  examOrder.forEach(exam=>{
-    examSelect.innerHTML += `<option value="${exam.id}">${examsData[exam.id].title}</option>`;
+  examSelect.innerHTML = "";
+  examsOrdered.forEach(e=>{
+    examSelect.innerHTML += `<option value="${e.id}">${e.title}</option>`;
   });
 
-  // Select last exam by default
-  if(examOrder.length>0){
-    const lastExamId = examOrder[examOrder.length-1].id;
-    examSelect.value = lastExamId;
+  // ✅ SELECT LAST EXAM BY DEFAULT
+  if(examsOrdered.length > 0){
+    examSelect.value = examsOrdered[examsOrdered.length - 1].id;
     loadLeaderboard();
   }
 }
 
 examSelect.onchange = loadLeaderboard;
 
-// Load leaderboard in real-time
 let unsubscribe = null;
 
 function loadLeaderboard(){
@@ -84,48 +88,48 @@ function loadLeaderboard(){
   if(!examId) return;
 
   const totalQuestions = examsData[examId]?.questions?.length || 1;
-  const studentsCol = collection(db,"students");
 
-  unsubscribe = onSnapshot(studentsCol, snapshot=>{
+  unsubscribe = onSnapshot(collection(db,"students"), snap=>{
     let list = [];
-    snapshot.forEach(s=>{
+
+    snap.forEach(s=>{
       const d = s.data();
-      const attempts = d.attempts || {};
       let score = 0;
 
-      if(attempts[examId] !== undefined){
-        if(typeof attempts[examId] === "number"){
-          score = attempts[examId]; // old format: number directly
-        } else if(typeof attempts[examId].score === "number"){
-          score = attempts[examId].score; // new format: object with score
+      if(d.attempts && d.attempts[examId] !== undefined){
+        if(typeof d.attempts[examId] === "number"){
+          score = d.attempts[examId];
+        } else if(typeof d.attempts[examId].score === "number"){
+          score = d.attempts[examId].score;
         }
       }
 
       const percentage = ((score / totalQuestions) * 100).toFixed(2);
-      list.push({ name: d.name, score, percentage });
+      list.push({name:d.name, score, percentage});
     });
 
-    // Sort descending by score
     list.sort((a,b)=>b.score - a.score);
 
     rows.innerHTML = "";
-    if(list.length===0){
-      rows.innerHTML = `<tr><td colspan="4">No students have attempted this exam yet.</td></tr>`;
-    } else {
-      list.forEach((s,i)=>{
-        rows.innerHTML += `<tr>
+    if(list.length === 0){
+      rows.innerHTML = `<tr><td colspan="4">No attempts yet</td></tr>`;
+      return;
+    }
+
+    list.forEach((s,i)=>{
+      rows.innerHTML += `
+        <tr>
           <td>${i+1}</td>
           <td>${s.name}</td>
           <td>${s.score}</td>
           <td>${s.percentage}%</td>
         </tr>`;
-      });
-    }
+    });
   });
 }
 
-// Initial load
 loadExams();
 </script>
+
 </body>
 </html>
