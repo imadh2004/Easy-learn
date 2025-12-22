@@ -3,60 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <title>Teacher Dashboard</title>
+
+<!-- Chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
-  body { font-family: Arial; background:#f4f6f8; padding:20px; }
-  h2, h3, h4 { text-align:center; }
-  input, button { padding:8px; margin:5px; }
-  #studentList div, #examsList div, .questionDiv { background:white; padding:10px; margin:5px; border-radius:5px; box-shadow:0 1px 5px rgba(0,0,0,0.1); }
+body { font-family: Arial; background:#f4f6f8; padding:20px; }
+section { background:white; padding:15px; margin:15px 0; border-radius:10px; }
+input, select, button { padding:8px; margin:5px; }
+table { width:100%; border-collapse:collapse; }
+th,td { border:1px solid #ccc; padding:6px; text-align:left; }
 </style>
 </head>
 <body>
 
 <h2>Teacher Dashboard</h2>
 
-<!-- Exam Creation Section -->
-<h3>Create Exam</h3>
-<input type="text" id="examTitle" placeholder="Exam Title"><br>
-<input type="number" id="examDuration" placeholder="Duration (minutes)"><br>
+<!-- ================= EXAM CONTROL ================= -->
+<section>
+<h3>Exams (Open / Close)</h3>
+<div id="examList"></div>
+</section>
 
-<div id="questionsContainer">
-  <h4>Questions</h4>
-  <div class="questionDiv">
-    <input type="text" class="questionText" placeholder="Question"><br>
-    <input type="text" class="option1" placeholder="Option A">
-    <input type="text" class="option2" placeholder="Option B">
-    <input type="text" class="option3" placeholder="Option C">
-    <input type="text" class="option4" placeholder="Option D">
-    <select class="answerSelect">
-      <option value="0">A</option>
-      <option value="1">B</option>
-      <option value="2">C</option>
-      <option value="3">D</option>
-    </select>
-  </div>
-</div>
-<button onclick="addQuestion()">Add Another Question</button><br>
-<button onclick="createExam()">Create Exam</button>
+<!-- ================= ANALYTICS ================= -->
+<section>
+<h3>Exam Analytics</h3>
+<select id="analyticsExam"></select>
+<button onclick="loadAnalytics()">View</button>
+<div id="analytics"></div>
+</section>
 
-<h4>Current Exams</h4>
-<div id="examsList">Loading exams...</div>
+<!-- ================= STUDENT GRAPH ================= -->
+<section>
+<h3>Student Performance</h3>
+<select id="studentSelect"></select>
+<button onclick="loadStudentPerformance()">View Graph</button>
+<canvas id="chart" width="600" height="300"></canvas>
+</section>
 
-<hr>
-
-<!-- Student Management Section -->
-<h3>Student Management</h3>
-<input type="text" id="studentName" placeholder="Name with Initials">
-<input type="text" id="studentIndex" placeholder="Index Number">
-<input type="password" id="studentPassword" placeholder="Password">
-<button onclick="addStudent()">Add Student</button>
-
-<h4>Current Students</h4>
-<div id="studentList">Loading students...</div>
+<!-- ================= PDF REPORT ================= -->
+<section>
+<h3>PDF Exam Report</h3>
+<select id="pdfExamSelect"></select>
+<button onclick="generatePDF()">Download PDF</button>
+</section>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, getDoc, updateDoc } 
+from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+const { jsPDF } = window.jspdf;
 
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
@@ -68,133 +68,118 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --------- EXAM SECTION ---------
-const examsDiv = document.getElementById("examsList");
-const questionsContainer = document.getElementById("questionsContainer");
+/* ---------- Load Exams ---------- */
+async function loadExams() {
+  examList.innerHTML = "";
+  analyticsExam.innerHTML = "";
+  pdfExamSelect.innerHTML = "";
 
-function addQuestion() {
-  const div = document.createElement("div");
-  div.className = "questionDiv";
-  div.innerHTML = `
-    <input type="text" class="questionText" placeholder="Question"><br>
-    <input type="text" class="option1" placeholder="Option A">
-    <input type="text" class="option2" placeholder="Option B">
-    <input type="text" class="option3" placeholder="Option C">
-    <input type="text" class="option4" placeholder="Option D">
-    <select class="answerSelect">
-      <option value="0">A</option>
-      <option value="1">B</option>
-      <option value="2">C</option>
-      <option value="3">D</option>
-    </select>
-  `;
-  questionsContainer.appendChild(div);
+  const snap = await getDocs(collection(db,"exams"));
+  snap.forEach(d=>{
+    const e=d.data();
+    examList.innerHTML += `
+      <div>
+        <b>${e.title}</b> (${e.duration} min)
+        <br>Status: ${e.isActive?"🟢 Open":"🔴 Closed"}
+        <br><button onclick="toggleExam('${d.id}',${e.isActive})">
+        ${e.isActive?"Close":"Open"}
+        </button>
+      </div>
+    `;
+    analyticsExam.innerHTML += `<option value="${d.id}">${e.title}</option>`;
+    pdfExamSelect.innerHTML += `<option value="${d.id}">${e.title}</option>`;
+  });
 }
 
-async function createExam(){
-  const title = document.getElementById("examTitle").value.trim();
-  const duration = parseInt(document.getElementById("examDuration").value);
-  if(!title || !duration){ alert("Enter title and duration"); return; }
-
-  const questionDivs = document.querySelectorAll(".questionDiv");
-  const questions = [];
-  questionDivs.forEach(div=>{
-    const q = div.querySelector(".questionText").value.trim();
-    const opts = [
-      div.querySelector(".option1").value.trim(),
-      div.querySelector(".option2").value.trim(),
-      div.querySelector(".option3").value.trim(),
-      div.querySelector(".option4").value.trim()
-    ];
-    const ans = parseInt(div.querySelector(".answerSelect").value);
-    if(q && opts.every(o=>o)) questions.push({q, options:opts, answer:ans});
-  });
-
-  if(questions.length===0){ alert("Add at least one question"); return; }
-
-  const examRef = doc(collection(db,"exams"));
-  await setDoc(examRef,{title,duration,questions,createdAt:Date.now()});
-  alert("Exam created!");
-  document.getElementById("examTitle").value='';
-  document.getElementById("examDuration").value='';
-  questionsContainer.innerHTML=`<h4>Questions</h4><div class="questionDiv">
-    <input type="text" class="questionText" placeholder="Question"><br>
-    <input type="text" class="option1" placeholder="Option A">
-    <input type="text" class="option2" placeholder="Option B">
-    <input type="text" class="option3" placeholder="Option C">
-    <input type="text" class="option4" placeholder="Option D">
-    <select class="answerSelect">
-      <option value="0">A</option>
-      <option value="1">B</option>
-      <option value="2">C</option>
-      <option value="3">D</option>
-    </select>
-  </div>`;
+window.toggleExam = async (id,state)=>{
+  await updateDoc(doc(db,"exams",id),{isActive:!state});
   loadExams();
-}
+};
 
-async function loadExams(){
-  examsDiv.innerHTML='';
-  const snapshot = await getDocs(collection(db,"exams"));
-  snapshot.forEach(snap=>{
-    const data = snap.data();
-    const div = document.createElement("div");
-    div.textContent = `${data.title} - Duration: ${data.duration} min`;
-    examsDiv.appendChild(div);
+/* ---------- Analytics ---------- */
+window.loadAnalytics = async ()=>{
+  const snap = await getDocs(
+    collection(db,"leaderboard",analyticsExam.value,"results")
+  );
+  let scores=[];
+  snap.forEach(d=>scores.push(d.data().score));
+  analytics.innerHTML = scores.length
+    ? `Attempts: ${scores.length}<br>
+       Avg: ${(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(2)}<br>
+       Max: ${Math.max(...scores)}<br>
+       Min: ${Math.min(...scores)}`
+    : "No attempts";
+};
+
+/* ---------- Student Graph ---------- */
+let chart;
+async function loadStudents(){
+  const snap = await getDocs(collection(db,"students"));
+  snap.forEach(d=>{
+    studentSelect.innerHTML += `<option value="${d.id}">
+      ${d.data().name}</option>`;
   });
 }
+
+window.loadStudentPerformance = async ()=>{
+  let labels=[],data=[];
+  const exams = await getDocs(collection(db,"exams"));
+  for(const e of exams.docs){
+    const r = await getDoc(
+      doc(db,"leaderboard",e.id,"results",studentSelect.value)
+    );
+    if(r.exists()){
+      labels.push(e.data().title);
+      data.push(r.data().score);
+    }
+  }
+  if(chart) chart.destroy();
+  chart = new Chart(chartCanvas.getContext("2d"),{
+    type:"line",
+    data:{labels,datasets:[{label:"Score",data,borderWidth:3}]},
+    options:{scales:{y:{beginAtZero:true}}}
+  });
+};
+
+/* ---------- PDF REPORT ---------- */
+window.generatePDF = async ()=>{
+  const examId = pdfExamSelect.value;
+  const examSnap = await getDoc(doc(db,"exams",examId));
+  const examTitle = examSnap.data().title;
+
+  const resultsSnap = await getDocs(
+    collection(db,"leaderboard",examId,"results")
+  );
+
+  const pdf = new jsPDF();
+  pdf.text(`Grade 10 Science - Exam Report`, 10, 10);
+  pdf.text(`Exam: ${examTitle}`, 10, 20);
+
+  let y = 30;
+  pdf.text("Name", 10, y);
+  pdf.text("Score", 150, y);
+  y += 8;
+
+  for(const r of resultsSnap.docs){
+    const uid = r.id;
+    const student = await getDoc(doc(db,"students",uid));
+    if(!student.exists()) continue;
+
+    pdf.text(student.data().name, 10, y);
+    pdf.text(String(r.data().score), 150, y);
+    y += 8;
+
+    if(y > 280){ pdf.addPage(); y = 20; }
+  }
+
+  pdf.save(`${examTitle}_report.pdf`);
+};
 
 loadExams();
-
-// --------- STUDENT MANAGEMENT SECTION ---------
-const studentListDiv = document.getElementById("studentList");
-
-async function loadStudents() {
-  studentListDiv.innerHTML = '';
-  const studentsSnap = await getDocs(collection(db,"students"));
-  studentsSnap.forEach(snap=>{
-    const data = snap.data();
-    const div = document.createElement("div");
-    div.textContent = `${data.name} (${data.index})`;
-    studentListDiv.appendChild(div);
-  });
-}
-
-async function addStudent(){
-  const name = document.getElementById("studentName").value.trim();
-  let index = document.getElementById("studentIndex").value.trim();
-  const password = document.getElementById("studentPassword").value;
-  if(!name || !index || !password){ alert("All fields required"); return; }
-
-  // Join index numbers without parentheses
-  index = index.replace(/\s+/g,''); 
-  const email = `easylearn${index}@example.com`;
-
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth,email,password);
-    const uid = userCredential.user.uid;
-
-    await setDoc(doc(db,"students",uid),{
-      name, index, attempts:{}, createdAt:Date.now()
-    });
-
-    alert("Student added!");
-    document.getElementById("studentName").value='';
-    document.getElementById("studentIndex").value='';
-    document.getElementById("studentPassword").value='';
-    loadStudents();
-  } catch(err){
-    console.error(err);
-    alert("Error adding student: " + err.message);
-  }
-}
-
 loadStudents();
-window.addStudent = addStudent;
-
 </script>
+
 </body>
 </html>
