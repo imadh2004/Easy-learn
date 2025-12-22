@@ -1,130 +1,120 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
 <title>Leaderboard</title>
 <style>
-  body { font-family: Arial; background:#f4f6f8; padding:20px; }
-  h2 { text-align:center; margin-bottom:20px; }
-  select { padding:8px; margin:10px auto; display:block; }
-  table { width: 80%; margin: auto; border-collapse: collapse; background:white; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-  th, td { padding:10px; text-align:center; border:1px solid #ccc; }
-  th { background:#f0f0f0; }
+body{font-family:Arial;background:#f4f6f8;padding:20px}
+table{width:100%;background:#fff;border-collapse:collapse}
+th,td{border:1px solid #ccc;padding:10px;text-align:center}
+th{background:#007bff;color:white}
+select{margin-bottom:10px;padding:5px}
 </style>
 </head>
 <body>
-<h2>Leaderboard</h2>
 
-<select id="examSelect">
-  <option value="">-- Select Exam --</option>
-</select>
+<h2>Leaderboard</h2>
+<select id="examSelect"></select>
 
 <table>
-  <thead>
-    <tr>
-      <th>Student Name</th>
-      <th>Score</th>
-      <th>Percentage</th>
-    </tr>
-  </thead>
-  <tbody id="leaderboardBody">
-    <tr><td colspan="3">Select an exam to view leaderboard</td></tr>
-  </tbody>
+<thead>
+  <tr>
+    <th>Rank</th>
+    <th>Name</th>
+    <th>Score</th>
+    <th>Percentage</th>
+  </tr>
+</thead>
+<tbody id="rows"></tbody>
 </table>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 // Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain: "science-cls.firebaseapp.com",
-  projectId: "science-cls",
-  storageBucket: "science-cls.appspot.com",
-  messagingSenderId: "778012932104",
-  appId: "1:778012932104:web:f997ad31edac581f0b79bd",
-  measurementId: "G-4TCCVY7CKN"
+  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain:"science-cls.firebaseapp.com",
+  projectId:"science-cls",
+  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const examSelect = document.getElementById("examSelect");
-const leaderboardBody = document.getElementById("leaderboardBody");
+const rows = document.getElementById("rows");
 
-let examsArray = [];
+let examsData = {};
+let examOrder = [];
 
-// Load exams into dropdown
-async function loadExams() {
-  const examsSnap = await getDocs(collection(db, "exams"));
-  examsArray = [];
-  examsSnap.forEach(docSnap => {
-    const data = docSnap.data();
-    examsArray.push({id: docSnap.id, ...data});
+// Fetch exams for dropdown and store questions length
+async function loadExams(){
+  const examsSnap = await getDocs(collection(db,"exams"));
+  examsSnap.forEach(e=>{
+    const data = e.data();
+    examsData[e.id] = data;
+    examOrder.push({id: e.id, createdAt: data.createdAt});
   });
 
-  // Sort by creation time
-  examsArray.sort((a,b) => a.createdAt - b.createdAt);
+  // Sort by createdAt ascending
+  examOrder.sort((a,b) => a.createdAt - b.createdAt);
 
-  // Populate dropdown
-  examSelect.innerHTML = `<option value="">-- Select Exam --</option>`;
-  examsArray.forEach(exam => {
-    const option = document.createElement("option");
-    option.value = exam.id;
-    option.textContent = exam.title;
-    examSelect.appendChild(option);
+  examOrder.forEach(exam=>{
+    examSelect.innerHTML += `<option value="${exam.id}">${examsData[exam.id].title}</option>`;
   });
 
   // Select last exam by default
-  if (examsArray.length > 0) {
-    const lastExamId = examsArray[examsArray.length - 1].id;
+  if(examOrder.length>0){
+    const lastExamId = examOrder[examOrder.length-1].id;
     examSelect.value = lastExamId;
-    loadLeaderboard(lastExamId);
+    loadLeaderboard();
   }
 }
 
-// Load leaderboard for selected exam
-async function loadLeaderboard(examId) {
-  leaderboardBody.innerHTML = 'Loading...';
-  const studentsSnap = await getDocs(collection(db, "students"));
-  leaderboardBody.innerHTML = '';
+examSelect.onchange = loadLeaderboard;
 
-  const exam = examsArray.find(e => e.id === examId);
-  if (!exam) {
-    leaderboardBody.innerHTML = `<tr><td colspan="3">Exam not found</td></tr>`;
-    return;
-  }
-  const totalQuestions = exam.questions.length;
+// Load leaderboard in real-time
+let unsubscribe = null;
 
-  let hasData = false;
-  studentsSnap.forEach(studentDoc => {
-    const studentData = studentDoc.data();
-    const attempts = studentData.attempts || {};
-    if (attempts.hasOwnProperty(examId)) {
-      const score = attempts[examId].score ?? 0;
+function loadLeaderboard(){
+  if(unsubscribe) unsubscribe();
+
+  const examId = examSelect.value;
+  if(!examId) return;
+
+  const totalQuestions = examsData[examId]?.questions?.length || 1;
+  const studentsCol = collection(db,"students");
+
+  unsubscribe = onSnapshot(studentsCol, snapshot=>{
+    let list = [];
+    snapshot.forEach(s=>{
+      const d = s.data();
+      const score = Number(d.attempts?.[examId]?.score || 0);
       const percentage = ((score / totalQuestions) * 100).toFixed(2);
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${studentData.name}</td><td>${score}/${totalQuestions}</td><td>${percentage}%</td>`;
-      leaderboardBody.appendChild(tr);
-      hasData = true;
+      list.push({ name: d.name, score, percentage });
+    });
+
+    // Sort descending by score
+    list.sort((a,b)=>b.score - a.score);
+
+    rows.innerHTML = "";
+    if(list.length===0){
+      rows.innerHTML = `<tr><td colspan="4">No students have attempted this exam yet.</td></tr>`;
+    } else {
+      list.forEach((s,i)=>{
+        rows.innerHTML += `<tr>
+          <td>${i+1}</td>
+          <td>${s.name}</td>
+          <td>${s.score}</td>
+          <td>${s.percentage}%</td>
+        </tr>`;
+      });
     }
   });
-
-  if (!hasData) {
-    leaderboardBody.innerHTML = `<tr><td colspan="3">No students have attempted this exam yet.</td></tr>`;
-  }
 }
 
-// Handle dropdown change
-examSelect.addEventListener("change", () => {
-  const examId = examSelect.value;
-  if (examId) loadLeaderboard(examId);
-  else leaderboardBody.innerHTML = `<tr><td colspan="3">Select an exam to view leaderboard</td></tr>`;
-});
-
-// Initialize
+// Initial load
 loadExams();
 </script>
 </body>
