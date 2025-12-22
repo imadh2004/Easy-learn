@@ -71,7 +71,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
@@ -219,16 +219,23 @@ async function showStudentDetails(uid,name){
   document.getElementById("studentTitle").textContent = `Student: ${name}`;
   studentExamsDiv.innerHTML = '';
   
-  const studentDoc = await getDocs(collection(db,"exams")); // get all exams
-  let labels = [];
-  let scores = [];
+  const studentSnap = await getDoc(doc(db,"students",uid));
+  const studentData = studentSnap.data();
+  if(!studentData || !studentData.attempts){
+    studentExamsDiv.textContent = "No exam attempts yet.";
+    if(chartInstance) chartInstance.destroy();
+    return;
+  }
 
-  for(let examSnap of studentDoc.docs){
-    const examData = examSnap.data();
-    const attempts = (await getDocs(collection(db,"students",uid,"attempts"))).docs;
-    const attempt = attempts.find(a=>a.id===examSnap.id);
-    if(attempt){
-      const scorePercent = attempt.data().score;
+  const attempts = studentData.attempts; // { examId: score, ... }
+  const labels = [];
+  const scores = [];
+
+  for(const examId in attempts){
+    const scorePercent = attempts[examId];
+    const examSnap = await getDoc(doc(db,"exams",examId));
+    if(examSnap.exists()){
+      const examData = examSnap.data();
       labels.push(examData.title);
       scores.push(scorePercent);
       const div = document.createElement("div");
