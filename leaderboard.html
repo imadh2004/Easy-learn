@@ -15,7 +15,6 @@
 <body>
 <h2>Leaderboard</h2>
 
-<!-- Exam Selection -->
 <select id="examSelect">
   <option value="">-- Select Exam --</option>
 </select>
@@ -55,55 +54,56 @@ const db = getFirestore(app);
 const examSelect = document.getElementById("examSelect");
 const leaderboardBody = document.getElementById("leaderboardBody");
 
-let examsData = {};
+let examsArray = [];
 
-// Load all exams into dropdown and set default to last exam
+// Load exams into dropdown
 async function loadExams() {
   const examsSnap = await getDocs(collection(db, "exams"));
-  const examsArray = [];
+  examsArray = [];
   examsSnap.forEach(docSnap => {
     const data = docSnap.data();
     examsArray.push({id: docSnap.id, ...data});
   });
 
-  // Sort exams by createdAt ascending
+  // Sort by creation time
   examsArray.sort((a,b) => a.createdAt - b.createdAt);
 
+  // Populate dropdown
+  examSelect.innerHTML = `<option value="">-- Select Exam --</option>`;
   examsArray.forEach(exam => {
-    examsData[exam.id] = exam;
     const option = document.createElement("option");
     option.value = exam.id;
     option.textContent = exam.title;
     examSelect.appendChild(option);
   });
 
-  // Select last exam by default if exists
+  // Select last exam by default
   if (examsArray.length > 0) {
-    examSelect.value = examsArray[examsArray.length - 1].id;
-    loadLeaderboard(examsArray[examsArray.length - 1].id);
+    const lastExamId = examsArray[examsArray.length - 1].id;
+    examSelect.value = lastExamId;
+    loadLeaderboard(lastExamId);
   }
 }
 
-// Fetch leaderboard for selected exam
+// Load leaderboard for selected exam
 async function loadLeaderboard(examId) {
   leaderboardBody.innerHTML = 'Loading...';
   const studentsSnap = await getDocs(collection(db, "students"));
   leaderboardBody.innerHTML = '';
 
-  const examData = examsData[examId];
-  if (!examData) {
+  const exam = examsArray.find(e => e.id === examId);
+  if (!exam) {
     leaderboardBody.innerHTML = `<tr><td colspan="3">Exam not found</td></tr>`;
     return;
   }
-
-  const totalQuestions = examData.questions.length;
+  const totalQuestions = exam.questions.length;
 
   let hasData = false;
   studentsSnap.forEach(studentDoc => {
     const studentData = studentDoc.data();
     const attempts = studentData.attempts || {};
-    if (attempts[examId]) {
-      const score = attempts[examId].score || 0;
+    if (attempts.hasOwnProperty(examId)) {
+      const score = attempts[examId].score ?? 0;
       const percentage = ((score / totalQuestions) * 100).toFixed(2);
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${studentData.name}</td><td>${score}/${totalQuestions}</td><td>${percentage}%</td>`;
@@ -117,14 +117,11 @@ async function loadLeaderboard(examId) {
   }
 }
 
-// Change leaderboard when selecting another exam
+// Handle dropdown change
 examSelect.addEventListener("change", () => {
   const examId = examSelect.value;
-  if (examId) {
-    loadLeaderboard(examId);
-  } else {
-    leaderboardBody.innerHTML = `<tr><td colspan="3">Select an exam to view leaderboard</td></tr>`;
-  }
+  if (examId) loadLeaderboard(examId);
+  else leaderboardBody.innerHTML = `<tr><td colspan="3">Select an exam to view leaderboard</td></tr>`;
 });
 
 // Initialize
