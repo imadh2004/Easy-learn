@@ -166,12 +166,21 @@ async function loadExams(){
     const data = snap.data();
     const div = document.createElement("div");
     div.className = "examDiv";
-    div.innerHTML = `
-      <span>${data.title} - Duration: ${data.duration} min - ${data.active ? "🟢 Active" : "🔴 Inactive"}</span>
-      <div>
-        <button onclick="toggleExam('${snap.id}',${data.active})">${data.active ? "Stop" : "Start"}</button>
-      </div>
-    `;
+
+    const titleSpan = document.createElement("span");
+    titleSpan.textContent = `${data.title} - Duration: ${data.duration} min - ${data.active ? "🟢 Active" : "🔴 Inactive"}`;
+
+    const btn = document.createElement("button");
+    btn.textContent = data.active ? "Stop" : "Start";
+    btn.addEventListener('click', async ()=>{
+      await toggleExam(snap.id, data.active);
+    });
+
+    const btnContainer = document.createElement("div");
+    btnContainer.appendChild(btn);
+
+    div.appendChild(titleSpan);
+    div.appendChild(btnContainer);
     examsDiv.appendChild(div);
   });
 }
@@ -239,7 +248,7 @@ async function showStudentDetails(uid,name){
     return;
   }
 
-  const attempts = studentData.attempts; // { examId: rawScore, ... }
+  const attempts = studentData.attempts;
   const labels = [];
   const scores = [];
 
