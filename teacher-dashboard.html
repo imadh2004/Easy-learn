@@ -9,6 +9,8 @@
   input, button { padding:8px; margin:5px; }
   #studentList div, #examsList div, .questionDiv { background:white; padding:10px; margin:5px; border-radius:5px; box-shadow:0 1px 5px rgba(0,0,0,0.1); cursor:pointer; }
   #studentDetails { background:white; padding:15px; margin-top:15px; border-radius:10px; box-shadow:0 1px 5px rgba(0,0,0,0.1); }
+  .examDiv { display:flex; justify-content: space-between; align-items: center; }
+  .examDiv button { margin-left:5px; }
 </style>
 </head>
 <body>
@@ -71,7 +73,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
@@ -131,7 +133,7 @@ async function createExam(){
   if(questions.length===0){ alert("Add at least one question"); return; }
 
   const examRef = doc(collection(db,"exams"));
-  await setDoc(examRef,{title,duration,questions,createdAt:Date.now()});
+  await setDoc(examRef,{title,duration,questions,createdAt:Date.now(), active:false});
   alert("Exam created!");
   document.getElementById("examTitle").value='';
   document.getElementById("examDuration").value='';
@@ -151,18 +153,28 @@ async function createExam(){
   loadExams();
 }
 
+async function toggleExam(examId, currentStatus){
+  const examRef = doc(db,"exams",examId);
+  await updateDoc(examRef,{active: !currentStatus});
+  loadExams();
+}
+
 async function loadExams(){
   examsDiv.innerHTML='';
   const snapshot = await getDocs(collection(db,"exams"));
   snapshot.forEach(snap=>{
     const data = snap.data();
     const div = document.createElement("div");
-    div.textContent = `${data.title} - Duration: ${data.duration} min`;
+    div.className = "examDiv";
+    div.innerHTML = `
+      <span>${data.title} - Duration: ${data.duration} min - ${data.active ? "🟢 Active" : "🔴 Inactive"}</span>
+      <div>
+        <button onclick="toggleExam('${snap.id}',${data.active})">${data.active ? "Stop" : "Start"}</button>
+      </div>
+    `;
     examsDiv.appendChild(div);
   });
 }
-
-loadExams();
 
 // ---------- STUDENT MANAGEMENT ----------
 const studentListDiv = document.getElementById("studentList");
@@ -273,6 +285,8 @@ async function showStudentDetails(uid,name){
 window.goToLeaderboard = () => {
   window.location.href = "leaderboard.html";
 };
+
+loadExams();
 
 </script>
 </body>
