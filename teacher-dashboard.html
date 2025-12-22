@@ -14,6 +14,10 @@
 
 <h2>Teacher Dashboard</h2>
 
+<!-- Leaderboard Button -->
+<button onclick="goToLeaderboard()">🏆 View Leaderboard</button>
+<hr>
+
 <!-- Exam Creation Section -->
 <h3>Create Exam</h3>
 <input type="text" id="examTitle" placeholder="Exam Title"><br>
@@ -194,6 +198,11 @@ async function addStudent(){
 
 loadStudents();
 window.addStudent = addStudent;
+
+// --------- LEADERBOARD NAVIGATION ---------
+window.goToLeaderboard = () => {
+  window.location.href = "leaderboard.html";
+};
 
 </script>
 </body>
