@@ -2,57 +2,133 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Science Class</title>
+<title>Easy Learn</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
+  /* ========== RESET & BASE ========== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: Arial;
-    background:#f4f6f8;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    min-height:100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
-  .container { text-align:center; }
-  .card, .login-box {
-    background:white;
-    padding:20px;
-    margin:10px;
-    border-radius:10px;
-    box-shadow:0 5px 15px rgba(0,0,0,0.1);
+
+  /* ========== CONTAINER ========== */
+  .container {
+    width: 90%;
+    max-width: 1000px;
+    text-align: center;
   }
+
+  /* ========== HEADER ========== */
+  h1 {
+    font-size: 2.5rem;
+    color: #fff;
+    margin-bottom: 30px;
+    text-shadow: 1px 1px 8px rgba(0,0,0,0.3);
+  }
+
+  /* ========== CARD STYLES ========== */
+  .cards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+
   .card {
-    cursor:pointer;
-    width:220px;
-    display:inline-block;
+    flex: 1 1 200px;
+    background: #fff;
+    border-radius: 15px;
+    padding: 25px 20px;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
   }
-  .card:hover { transform:scale(1.05); }
-  input {
-    padding:8px;
-    margin:5px;
-    width:200px;
+  .card:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
   }
-  button {
-    padding:8px 15px;
-    margin:5px;
-    cursor:pointer;
+  .card h2 { margin-bottom: 10px; font-size: 1.5rem; }
+  .card p { font-size: 1rem; color: #555; }
+
+  /* ========== LOGIN BOX ========== */
+  .login-box {
+    background: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    display: none;
+    margin: auto;
   }
-  #student-login,#teacher-login { display:none; }
+  .login-box h2 {
+    margin-bottom: 20px;
+    color: #2575fc;
+  }
+  .login-box input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+  }
+  .login-box button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 15px;
+    background: #2575fc;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  .login-box button:hover {
+    background: #6a11cb;
+  }
+
+  /* ========== BACK BUTTON ========== */
+  .login-box .back-btn {
+    background: #ccc;
+    color: #333;
+    margin-top: 10px;
+  }
+  .login-box .back-btn:hover {
+    background: #aaa;
+  }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 600px) {
+    h1 { font-size: 2rem; }
+    .cards { flex-direction: column; }
+    .card { width: 100%; }
+  }
 </style>
 </head>
 <body>
 
-<!-- ================= LANDING ================= -->
 <div class="container" id="landing">
-  <h1>Grade 10 Online Science Class</h1>
-  <div class="card" id="studentBtn">
-    🎓
-    <h2>Student</h2>
-    <p>Login to take exams</p>
-  </div>
-  <div class="card" id="teacherBtn">
-    👨‍🏫
-    <h2>Teacher</h2>
-    <p>Manage students & exams</p>
+  <h1>Welcome to Easy Learn</h1>
+  <div class="cards">
+    <div class="card" id="studentBtn">
+      🎓
+      <h2>Student</h2>
+      <p>Login to take exams</p>
+    </div>
+    <div class="card" id="teacherBtn">
+      👨‍🏫
+      <h2>Teacher</h2>
+      <p>Manage students & exams</p>
+    </div>
   </div>
 </div>
 
@@ -61,8 +137,8 @@
   <h2>Student Login</h2>
   <input type="text" id="studentIndex" placeholder="Index Number"><br>
   <input type="password" id="studentPassword" placeholder="Password"><br>
-  <button id="studentLoginBtn">Login</button><br>
-  <button id="studentBackBtn">Back</button>
+  <button id="studentLoginBtn">Login</button>
+  <button class="back-btn" id="studentBackBtn">Back</button>
 </div>
 
 <!-- ================= TEACHER LOGIN ================= -->
@@ -70,8 +146,8 @@
   <h2>Teacher Login</h2>
   <input type="email" id="teacherEmail" placeholder="Email"><br>
   <input type="password" id="teacherPassword" placeholder="Password"><br>
-  <button id="teacherLoginBtn">Login</button><br>
-  <button id="teacherBackBtn">Back</button>
+  <button id="teacherLoginBtn">Login</button>
+  <button class="back-btn" id="teacherBackBtn">Back</button>
 </div>
 
 <script type="module">
@@ -101,17 +177,14 @@ document.getElementById("studentBtn").onclick = () => {
   landing.style.display = "none";
   studentLoginBox.style.display = "block";
 };
-
 document.getElementById("teacherBtn").onclick = () => {
   landing.style.display = "none";
   teacherLoginBox.style.display = "block";
 };
-
 document.getElementById("studentBackBtn").onclick = () => {
   studentLoginBox.style.display = "none";
   landing.style.display = "block";
 };
-
 document.getElementById("teacherBackBtn").onclick = () => {
   teacherLoginBox.style.display = "none";
   landing.style.display = "block";
@@ -127,7 +200,6 @@ document.getElementById("studentLoginBtn").onclick = () => {
     return;
   }
 
-  // SAME LOGIC AS TEACHER DASHBOARD
   index = index.replace(/\s+/g, "");
   const email = `easylearn${index}@example.com`;
 
