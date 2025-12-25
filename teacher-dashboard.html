@@ -141,7 +141,7 @@ window.createExam = async () => {
   loadExams();
 };
 
-/* ================= EXAMS LIST ================= */
+/* ================= EXAMS ================= */
 async function loadExams(){
   examsList.innerHTML="";
   const snap=await getDocs(collection(db,"exams"));
@@ -177,23 +177,20 @@ window.registerStudent = async () => {
   index=index.replace(/\s+/g,"");
   const email=`easylearn${index}@example.com`;
 
-  try{
-    const cred=await createUserWithEmailAndPassword(auth,email,password);
-    await setDoc(doc(db,"students",cred.user.uid),{
-      name,index,attempts:{},createdAt:Date.now()
-    });
+  const cred=await createUserWithEmailAndPassword(auth,email,password);
+  await setDoc(doc(db,"students",cred.user.uid),{
+    name,index,attempts:{},createdAt:Date.now()
+  });
 
-    studentName.value="";
-    studentIndex.value="";
-    studentPassword.value="";
-    loadStudents();
-  }catch(e){
-    alert(e.message);
-  }
+  studentName.value="";
+  studentIndex.value="";
+  studentPassword.value="";
+  loadStudents();
 };
 
-/* ================= LOAD STUDENTS ================= */
+/* ================= STUDENTS ================= */
 let chart=null;
+let selectedStudentId=null;
 
 async function loadStudents(){
   studentList.innerHTML="";
@@ -206,8 +203,17 @@ async function loadStudents(){
   });
 }
 
-/* ================= STUDENT DETAILS ================= */
+/* ================= STUDENT DETAILS (TOGGLE FIX) ================= */
 async function showStudent(uid,name){
+
+  if(selectedStudentId===uid){
+    studentDetails.style.display="none";
+    selectedStudentId=null;
+    if(chart) chart.destroy();
+    return;
+  }
+
+  selectedStudentId=uid;
   studentDetails.style.display="block";
   studentTitle.textContent=name;
   studentExams.innerHTML="";
