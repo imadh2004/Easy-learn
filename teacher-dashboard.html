@@ -23,6 +23,7 @@ input,button{padding:8px;margin:5px}
 <button onclick="goToLeaderboard()">🏆 View Leaderboard</button>
 <hr>
 
+<!-- ================= EXAM CREATION ================= -->
 <h3>Create Exam</h3>
 <input id="examTitle" placeholder="Exam Title"><br>
 <input id="examDuration" type="number" placeholder="Duration (minutes)"><br>
@@ -52,9 +53,17 @@ input,button{padding:8px;margin:5px}
 
 <hr>
 
-<h3>Students</h3>
+<!-- ================= STUDENT REGISTRATION ================= -->
+<h3>Register Student</h3>
+<input id="studentName" placeholder="Name with Initials">
+<input id="studentIndex" placeholder="Index Number">
+<input id="studentPassword" type="password" placeholder="Password">
+<button onclick="registerStudent()">Add Student</button>
+
+<h4>Students</h4>
 <div id="studentList"></div>
 
+<!-- ================= STUDENT DETAILS ================= -->
 <div id="studentDetails" style="display:none">
   <h3 id="studentTitle"></h3>
   <div id="studentExams"></div>
@@ -71,37 +80,38 @@ import {
   doc, setDoc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-/* ---------- FIREBASE ---------- */
+/* ================= FIREBASE ================= */
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain:"science-cls.firebaseapp.com",
   projectId:"science-cls",
   appId:"1:778012932104:web:f997ad31edac581f0b79bd"
 };
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ---------- QUESTIONS ---------- */
+/* ================= QUESTIONS ================= */
 window.addQuestion = () => {
   const d=document.createElement("div");
   d.className="questionDiv";
   d.innerHTML=`
-  <input class="questionText" placeholder="Question"><br>
-  <input class="option1" placeholder="Option A">
-  <input class="option2" placeholder="Option B">
-  <input class="option3" placeholder="Option C">
-  <input class="option4" placeholder="Option D">
-  <select class="answerSelect">
-    <option value="0">A</option>
-    <option value="1">B</option>
-    <option value="2">C</option>
-    <option value="3">D</option>
-  </select>`;
+    <input class="questionText" placeholder="Question"><br>
+    <input class="option1" placeholder="Option A">
+    <input class="option2" placeholder="Option B">
+    <input class="option3" placeholder="Option C">
+    <input class="option4" placeholder="Option D">
+    <select class="answerSelect">
+      <option value="0">A</option>
+      <option value="1">B</option>
+      <option value="2">C</option>
+      <option value="3">D</option>
+    </select>`;
   questionsContainer.appendChild(d);
 };
 
-/* ---------- CREATE EXAM ---------- */
+/* ================= CREATE EXAM ================= */
 window.createExam = async () => {
   const title=examTitle.value.trim();
   const duration=Number(examDuration.value);
@@ -110,7 +120,12 @@ window.createExam = async () => {
   const questions=[];
   document.querySelectorAll(".questionDiv").forEach(q=>{
     const t=q.querySelector(".questionText").value.trim();
-    const o=[...q.querySelectorAll("input:not(.questionText)")].map(i=>i.value);
+    const o=[
+      q.querySelector(".option1").value,
+      q.querySelector(".option2").value,
+      q.querySelector(".option3").value,
+      q.querySelector(".option4").value
+    ];
     const a=Number(q.querySelector(".answerSelect").value);
     if(t && o.every(v=>v)) questions.push({q:t,options:o,answer:a});
   });
@@ -121,10 +136,12 @@ window.createExam = async () => {
     title,duration,questions,active:false,createdAt:Date.now()
   });
 
+  examTitle.value="";
+  examDuration.value="";
   loadExams();
 };
 
-/* ---------- LOAD EXAMS ---------- */
+/* ================= EXAMS LIST ================= */
 async function loadExams(){
   examsList.innerHTML="";
   const snap=await getDocs(collection(db,"exams"));
@@ -135,7 +152,7 @@ async function loadExams(){
   exams.forEach(e=>{
     const d=document.createElement("div");
     d.className="examDiv";
-    d.innerHTML=`<span>${e.title} — ${e.active?"🟢":"🔴"}</span>
+    d.innerHTML=`<span>${e.title} — ${e.active?"🟢 Active":"🔴 Inactive"}</span>
                  <button>${e.active?"Stop":"Start"}</button>`;
     d.querySelector("button").onclick=()=>toggleExam(e.id);
     examsList.appendChild(d);
@@ -149,7 +166,33 @@ async function toggleExam(id){
   loadExams();
 }
 
-/* ---------- LOAD STUDENTS (CLICKABLE) ---------- */
+/* ================= STUDENT REGISTRATION ================= */
+window.registerStudent = async () => {
+  const name=studentName.value.trim();
+  let index=studentIndex.value.trim();
+  const password=studentPassword.value;
+
+  if(!name||!index||!password) return alert("Fill all fields");
+
+  index=index.replace(/\s+/g,"");
+  const email=`easylearn${index}@example.com`;
+
+  try{
+    const cred=await createUserWithEmailAndPassword(auth,email,password);
+    await setDoc(doc(db,"students",cred.user.uid),{
+      name,index,attempts:{},createdAt:Date.now()
+    });
+
+    studentName.value="";
+    studentIndex.value="";
+    studentPassword.value="";
+    loadStudents();
+  }catch(e){
+    alert(e.message);
+  }
+};
+
+/* ================= LOAD STUDENTS ================= */
 let chart=null;
 
 async function loadStudents(){
@@ -163,7 +206,7 @@ async function loadStudents(){
   });
 }
 
-/* ---------- STUDENT DETAILS ---------- */
+/* ================= STUDENT DETAILS ================= */
 async function showStudent(uid,name){
   studentDetails.style.display="block";
   studentTitle.textContent=name;
@@ -192,7 +235,7 @@ async function showStudent(uid,name){
   });
 }
 
-/* ---------- INIT ---------- */
+/* ================= INIT ================= */
 window.goToLeaderboard=()=>location.href="leaderboard.html";
 loadExams();
 loadStudents();
