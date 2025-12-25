@@ -13,19 +13,6 @@
     margin:5px;
     border-radius:5px;
     box-shadow:0 1px 5px rgba(0,0,0,0.1);
-    cursor:pointer;
-  }
-  #studentDetails {
-    background:white;
-    padding:15px;
-    margin-top:15px;
-    border-radius:10px;
-    box-shadow:0 1px 5px rgba(0,0,0,0.1);
-  }
-  .examDiv {
-    display:flex;
-    justify-content: space-between;
-    align-items: center;
   }
 </style>
 </head>
@@ -33,9 +20,7 @@
 
 <h2>Teacher Dashboard</h2>
 
-<button onclick="goToLeaderboard()">🏆 View Leaderboard</button>
-<hr>
-
+<!-- EXAM CREATION -->
 <h3>Create Exam</h3>
 <input type="text" id="examTitle" placeholder="Exam Title"><br>
 <input type="number" id="examDuration" placeholder="Duration (minutes)"><br>
@@ -63,29 +48,9 @@
 <h4>Current Exams</h4>
 <div id="examsList">Loading exams...</div>
 
-<hr>
-
-<h3>Student Management</h3>
-<input type="text" id="studentName" placeholder="Name with Initials">
-<input type="text" id="studentIndex" placeholder="Index Number">
-<input type="password" id="studentPassword" placeholder="Password">
-<button onclick="addStudent()">Add Student</button>
-
-<h4>Current Students</h4>
-<div id="studentList">Loading students...</div>
-
-<div id="studentDetails" style="display:none;">
-  <h3 id="studentTitle"></h3>
-  <div id="studentExams"></div>
-  <canvas id="studentChart" width="400" height="200"></canvas>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
@@ -97,13 +62,12 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ---------- EXAM SECTION ----------
 const examsDiv = document.getElementById("examsList");
 const questionsContainer = document.getElementById("questionsContainer");
 
+/* ---------- ADD QUESTION ---------- */
 function addQuestion() {
   const div = document.createElement("div");
   div.className = "questionDiv";
@@ -123,37 +87,51 @@ function addQuestion() {
   questionsContainer.appendChild(div);
 }
 
-/* ✅ FIX */
-window.addQuestion = addQuestion;
-
+/* ---------- CREATE EXAM (FIXED) ---------- */
 async function createExam(){
   const title = document.getElementById("examTitle").value.trim();
-  const duration = parseInt(document.getElementById("examDuration").value);
-  if(!title || !duration){ alert("Enter title and duration"); return; }
+  const duration = Number(document.getElementById("examDuration").value);
+
+  if(!title || !duration){
+    alert("Enter exam title and duration");
+    return;
+  }
 
   const questionDivs = document.querySelectorAll(".questionDiv");
   const questions = [];
 
   questionDivs.forEach(div=>{
     const q = div.querySelector(".questionText").value.trim();
-    const opts = [
+    const options = [
       div.querySelector(".option1").value.trim(),
       div.querySelector(".option2").value.trim(),
       div.querySelector(".option3").value.trim(),
       div.querySelector(".option4").value.trim()
     ];
-    const ans = parseInt(div.querySelector(".answerSelect").value);
-    if(q && opts.every(o=>o)) questions.push({q, options:opts, answer:ans});
+    const answer = Number(div.querySelector(".answerSelect").value);
+
+    if(q && options.every(o=>o)){
+      questions.push({ q, options, answer });
+    }
   });
 
-  if(questions.length===0){ alert("Add at least one question"); return; }
+  if(questions.length === 0){
+    alert("Add at least one valid question");
+    return;
+  }
 
-  const examRef = doc(collection(db,"exams"));
-  await setDoc(examRef,{title,duration,questions,createdAt:Date.now(),active:false});
+  await setDoc(doc(collection(db,"exams")), {
+    title,
+    duration,
+    questions,
+    active:false,
+    createdAt: Date.now()
+  });
 
-  alert("Exam created!");
-  document.getElementById("examTitle").value='';
-  document.getElementById("examDuration").value='';
+  alert("Exam created successfully");
+
+  document.getElementById("examTitle").value = "";
+  document.getElementById("examDuration").value = "";
 
   questionsContainer.innerHTML = `
     <h4>Questions</h4>
@@ -171,63 +149,28 @@ async function createExam(){
       </select>
     </div>
   `;
+
   loadExams();
 }
 
-async function toggleExam(id){
-  const ref = doc(db,"exams",id);
-  const snap = await getDoc(ref);
-  await updateDoc(ref,{active:!snap.data().active});
-  loadExams();
-}
-
+/* ---------- LOAD EXAMS ---------- */
 async function loadExams(){
-  examsDiv.innerHTML='';
+  examsDiv.innerHTML = "";
   const snap = await getDocs(collection(db,"exams"));
-  const exams=[];
-  snap.forEach(s=>exams.push({id:s.id,...s.data()}));
-  exams.sort((a,b)=>a.createdAt-b.createdAt);
-  exams.forEach(e=>{
-    const d=document.createElement("div");
-    d.className="examDiv";
-    d.innerHTML=`<span>${e.title} - ${e.active?"🟢 Active":"🔴 Inactive"}</span>`;
-    const b=document.createElement("button");
-    b.textContent=e.active?"Stop":"Start";
-    b.onclick=()=>toggleExam(e.id);
-    d.appendChild(b);
-    examsDiv.appendChild(d);
+  snap.forEach(docSnap=>{
+    const d = docSnap.data();
+    const div = document.createElement("div");
+    div.textContent = `${d.title} (${d.duration} min)`;
+    examsDiv.appendChild(div);
   });
 }
 
-// ---------- STUDENTS ----------
-const studentListDiv=document.getElementById("studentList");
-async function loadStudents(){
-  studentListDiv.innerHTML='';
-  const snap=await getDocs(collection(db,"students"));
-  snap.forEach(s=>{
-    const d=document.createElement("div");
-    d.textContent=`${s.data().name} (${s.data().index})`;
-    studentListDiv.appendChild(d);
-  });
-}
-
-async function addStudent(){
-  const name=studentName.value.trim();
-  const index=studentIndex.value.trim();
-  const pass=studentPassword.value;
-  if(!name||!index||!pass){alert("All fields required");return;}
-  const email=`easylearn${index}@example.com`;
-  const u=await createUserWithEmailAndPassword(auth,email,pass);
-  await setDoc(doc(db,"students",u.user.uid),{name,index,attempts:{},createdAt:Date.now()});
-  alert("Student added!");
-  loadStudents();
-}
-
-window.addStudent=addStudent;
-window.goToLeaderboard=()=>location.href="leaderboard.html";
-
-loadStudents();
 loadExams();
+
+/* 🔑 THIS IS THE ACTUAL FIX */
+window.addQuestion = addQuestion;
+window.createExam = createExam;
+
 </script>
 </body>
 </html>
