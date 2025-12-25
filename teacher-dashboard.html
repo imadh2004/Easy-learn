@@ -3,44 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <title>Teacher Dashboard</title>
-
 <style>
   body { font-family: Arial; background:#f4f6f8; padding:20px; }
   h2, h3, h4 { text-align:center; }
   input, button { padding:8px; margin:5px; }
-  #studentList div,
-  #examsList div,
-  .questionDiv {
-    background:white;
-    padding:10px;
-    margin:5px;
-    border-radius:5px;
-    box-shadow:0 1px 5px rgba(0,0,0,0.1);
-    cursor:pointer;
-  }
-  #studentDetails {
-    background:white;
-    padding:15px;
-    margin-top:15px;
-    border-radius:10px;
-    box-shadow:0 1px 5px rgba(0,0,0,0.1);
-  }
-  .examDiv {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-  }
+  #studentList div, #examsList div, .questionDiv { background:white; padding:10px; margin:5px; border-radius:5px; box-shadow:0 1px 5px rgba(0,0,0,0.1); cursor:pointer; }
 </style>
 </head>
-
 <body>
 
 <h2>Teacher Dashboard</h2>
 
-<button onclick="goToLeaderboard()">🏆 View Leaderboard</button>
-<hr>
-
-<!-- EXAM CREATION -->
 <h3>Create Exam</h3>
 <input type="text" id="examTitle" placeholder="Exam Title"><br>
 <input type="number" id="examDuration" placeholder="Duration (minutes)"><br>
@@ -61,37 +34,15 @@
     </select>
   </div>
 </div>
-
 <button onclick="addQuestion()">Add Another Question</button><br>
 <button onclick="createExam()">Create Exam</button>
 
 <h4>Current Exams</h4>
 <div id="examsList">Loading exams...</div>
 
-<hr>
-
-<!-- STUDENT MANAGEMENT -->
-<h3>Student Management</h3>
-<input type="text" id="studentName" placeholder="Name with Initials">
-<input type="text" id="studentIndex" placeholder="Index Number">
-<input type="password" id="studentPassword" placeholder="Password">
-<button onclick="addStudent()">Add Student</button>
-
-<h4>Current Students</h4>
-<div id="studentList">Loading students...</div>
-
-<div id="studentDetails" style="display:none;">
-  <h3 id="studentTitle"></h3>
-  <div id="studentExams"></div>
-  <canvas id="studentChart" width="400" height="200"></canvas>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
@@ -103,14 +54,12 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ---------------- QUESTIONS ---------------- */
-
+const examsDiv = document.getElementById("examsList");
 const questionsContainer = document.getElementById("questionsContainer");
 
-function addQuestion(){
+function addQuestion() {
   const div = document.createElement("div");
   div.className = "questionDiv";
   div.innerHTML = `
@@ -129,19 +78,13 @@ function addQuestion(){
   questionsContainer.appendChild(div);
 }
 
-/* ✅ FIX REQUIRED FOR MODULE */
-window.addQuestion = addQuestion;
-
-/* ---------------- EXAMS ---------------- */
-
 async function createExam(){
-  const title = examTitle.value.trim();
-  const duration = parseInt(examDuration.value);
+  const title = document.getElementById("examTitle").value.trim();
+  const duration = parseInt(document.getElementById("examDuration").value);
   if(!title || !duration){ alert("Enter title and duration"); return; }
 
   const questionDivs = document.querySelectorAll(".questionDiv");
   const questions = [];
-
   questionDivs.forEach(div=>{
     const q = div.querySelector(".questionText").value.trim();
     const opts = [
@@ -151,83 +94,50 @@ async function createExam(){
       div.querySelector(".option4").value.trim()
     ];
     const ans = parseInt(div.querySelector(".answerSelect").value);
-    if(q && opts.every(o=>o)) questions.push({q,options:opts,answer:ans});
+    if(q && opts.every(o=>o)) questions.push({q, options:opts, answer:ans});
   });
 
   if(questions.length===0){ alert("Add at least one question"); return; }
 
-  const ref = doc(collection(db,"exams"));
-  await setDoc(ref,{title,duration,questions,createdAt:Date.now(),active:false});
-  alert("Exam created!");
-  examTitle.value='';
-  examDuration.value='';
-  loadExams();
-}
-
-async function toggleExam(id){
-  const ref = doc(db,"exams",id);
-  const snap = await getDoc(ref);
-  await updateDoc(ref,{active:!snap.data().active});
-  loadExams();
+  try {
+    const examRef = doc(collection(db,"exams"));
+    await setDoc(examRef, {title, duration, questions, createdAt:Date.now(), active:false});
+    alert("Exam created successfully!");
+    document.getElementById("examTitle").value = '';
+    document.getElementById("examDuration").value = '';
+    questionsContainer.innerHTML = `<h4>Questions</h4><div class="questionDiv">
+      <input type="text" class="questionText" placeholder="Question"><br>
+      <input type="text" class="option1" placeholder="Option A">
+      <input type="text" class="option2" placeholder="Option B">
+      <input type="text" class="option3" placeholder="Option C">
+      <input type="text" class="option4" placeholder="Option D">
+      <select class="answerSelect">
+        <option value="0">A</option>
+        <option value="1">B</option>
+        <option value="2">C</option>
+        <option value="3">D</option>
+      </select>
+    </div>`;
+    loadExams();
+  } catch(err){
+    console.error(err);
+    alert("Error creating exam: "+err.message);
+  }
 }
 
 async function loadExams(){
-  examsList.innerHTML='';
-  const snap = await getDocs(collection(db,"exams"));
-  const exams=[];
-  snap.forEach(s=>exams.push({id:s.id,...s.data()}));
-  exams.sort((a,b)=>a.createdAt-b.createdAt);
-
-  exams.forEach(e=>{
-    const div=document.createElement("div");
-    div.className="examDiv";
-    div.innerHTML=`<span>${e.title} (${e.active?"Active":"Inactive"})</span>`;
-    const btn=document.createElement("button");
-    btn.textContent=e.active?"Stop":"Start";
-    btn.onclick=()=>toggleExam(e.id);
-    div.appendChild(btn);
-    examsList.appendChild(div);
+  examsDiv.innerHTML='';
+  const snapshot = await getDocs(collection(db,"exams"));
+  snapshot.forEach(snap=>{
+    const data = snap.data();
+    const div = document.createElement("div");
+    div.textContent = `${data.title} - Duration: ${data.duration} min`;
+    examsDiv.appendChild(div);
   });
 }
-
-/* ---------------- STUDENTS ---------------- */
-
-async function addStudent(){
-  const name=studentName.value.trim();
-  const index=studentIndex.value.trim();
-  const password=studentPassword.value;
-  if(!name||!index||!password){alert("All fields required");return;}
-
-  const email=`easylearn${index}@example.com`;
-  const user=await createUserWithEmailAndPassword(auth,email,password);
-
-  await setDoc(doc(db,"students",user.user.uid),{
-    name,index,attempts:{},createdAt:Date.now()
-  });
-
-  alert("Student added!");
-  loadStudents();
-}
-
-window.addStudent = addStudent;
-
-async function loadStudents(){
-  studentList.innerHTML='';
-  const snap=await getDocs(collection(db,"students"));
-  snap.forEach(s=>{
-    const d=document.createElement("div");
-    d.textContent=`${s.data().name} (${s.data().index})`;
-    studentList.appendChild(d);
-  });
-}
-
-/* ---------------- NAV ---------------- */
-
-window.goToLeaderboard = () => location.href="leaderboard.html";
 
 loadExams();
-loadStudents();
-</script>
 
+</script>
 </body>
 </html>
