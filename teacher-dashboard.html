@@ -9,9 +9,12 @@ h2,h3,h4{text-align:center}
 input,button{padding:8px;margin:5px}
 #studentList div,#examsList div,.questionDiv{
   background:#fff;padding:10px;margin:6px;border-radius:6px;
-  box-shadow:0 1px 5px rgba(0,0,0,.1)
+  box-shadow:0 1px 5px rgba(0,0,0,.1);cursor:pointer
 }
 .examDiv{display:flex;justify-content:space-between;align-items:center}
+#studentDetails{
+  background:#fff;padding:15px;border-radius:8px;margin-top:15px
+}
 </style>
 </head>
 <body>
@@ -45,18 +48,20 @@ input,button{padding:8px;margin:5px}
 <button onclick="createExam()">Create Exam</button>
 
 <h4>Current Exams</h4>
-<div id="examsList">Loading exams...</div>
+<div id="examsList"></div>
 
 <hr>
 
-<h3>Student Management</h3>
-<input id="studentName" placeholder="Name">
-<input id="studentIndex" placeholder="Index">
-<input id="studentPassword" type="password" placeholder="Password">
-<button onclick="addStudent()">Add Student</button>
+<h3>Students</h3>
+<div id="studentList"></div>
 
-<h4>Current Students</h4>
-<div id="studentList">Loading students...</div>
+<div id="studentDetails" style="display:none">
+  <h3 id="studentTitle"></h3>
+  <div id="studentExams"></div>
+  <canvas id="studentChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
@@ -66,24 +71,18 @@ import {
   doc, setDoc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-/* ---------------- FIREBASE ---------------- */
+/* ---------- FIREBASE ---------- */
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain:"science-cls.firebaseapp.com",
   projectId:"science-cls",
   appId:"1:778012932104:web:f997ad31edac581f0b79bd"
 };
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ---------------- DOM ---------------- */
-const examsDiv = document.getElementById("examsList");
-const studentListDiv = document.getElementById("studentList");
-const questionsContainer = document.getElementById("questionsContainer");
-
-/* ---------------- QUESTIONS ---------------- */
+/* ---------- QUESTIONS ---------- */
 window.addQuestion = () => {
   const d=document.createElement("div");
   d.className="questionDiv";
@@ -102,45 +101,32 @@ window.addQuestion = () => {
   questionsContainer.appendChild(d);
 };
 
-/* ---------------- CREATE EXAM ---------------- */
+/* ---------- CREATE EXAM ---------- */
 window.createExam = async () => {
-  try{
-    const title=examTitle.value.trim();
-    const duration=Number(examDuration.value);
-    if(!title||!duration) return alert("Enter title & duration");
+  const title=examTitle.value.trim();
+  const duration=Number(examDuration.value);
+  if(!title||!duration) return alert("Enter title & duration");
 
-    const questions=[];
-    document.querySelectorAll(".questionDiv").forEach(q=>{
-      const text=q.querySelector(".questionText").value.trim();
-      const opts=[
-        q.querySelector(".option1").value,
-        q.querySelector(".option2").value,
-        q.querySelector(".option3").value,
-        q.querySelector(".option4").value
-      ];
-      const ans=Number(q.querySelector(".answerSelect").value);
-      if(text && opts.every(o=>o)) questions.push({q:text,options:opts,answer:ans});
-    });
+  const questions=[];
+  document.querySelectorAll(".questionDiv").forEach(q=>{
+    const t=q.querySelector(".questionText").value.trim();
+    const o=[...q.querySelectorAll("input:not(.questionText)")].map(i=>i.value);
+    const a=Number(q.querySelector(".answerSelect").value);
+    if(t && o.every(v=>v)) questions.push({q:t,options:o,answer:a});
+  });
 
-    if(!questions.length) return alert("Add at least one question");
+  if(!questions.length) return alert("Add at least one question");
 
-    await setDoc(doc(collection(db,"exams")),{
-      title,duration,questions,
-      active:false,
-      createdAt:Date.now()
-    });
+  await setDoc(doc(collection(db,"exams")),{
+    title,duration,questions,active:false,createdAt:Date.now()
+  });
 
-    alert("Exam created");
-    loadExams();
-  }catch(e){
-    console.error(e);
-    alert("Create exam failed");
-  }
+  loadExams();
 };
 
-/* ---------------- LOAD EXAMS ---------------- */
+/* ---------- LOAD EXAMS ---------- */
 async function loadExams(){
-  examsDiv.innerHTML="";
+  examsList.innerHTML="";
   const snap=await getDocs(collection(db,"exams"));
   const exams=[];
   snap.forEach(s=>exams.push({id:s.id,...s.data()}));
@@ -149,60 +135,67 @@ async function loadExams(){
   exams.forEach(e=>{
     const d=document.createElement("div");
     d.className="examDiv";
-    d.innerHTML=`
-      <span>${e.title} — ${e.active?"🟢 Active":"🔴 Inactive"}</span>
-      <button>${e.active?"Stop":"Start"}</button>`;
+    d.innerHTML=`<span>${e.title} — ${e.active?"🟢":"🔴"}</span>
+                 <button>${e.active?"Stop":"Start"}</button>`;
     d.querySelector("button").onclick=()=>toggleExam(e.id);
-    examsDiv.appendChild(d);
+    examsList.appendChild(d);
   });
 }
 
 async function toggleExam(id){
-  const ref=doc(db,"exams",id);
-  const snap=await getDoc(ref);
-  await updateDoc(ref,{active:!snap.data().active});
+  const r=doc(db,"exams",id);
+  const s=await getDoc(r);
+  await updateDoc(r,{active:!s.data().active});
   loadExams();
 }
 
-/* ---------------- STUDENTS ---------------- */
-window.addStudent = async () => {
-  try{
-    const name=studentName.value.trim();
-    const index=studentIndex.value.trim();
-    const pass=studentPassword.value;
-    if(!name||!index||!pass) return alert("All fields required");
-
-    const email=`student${index}@example.com`;
-    const u=await createUserWithEmailAndPassword(auth,email,pass);
-
-    await setDoc(doc(db,"students",u.user.uid),{
-      name,index,attempts:{},createdAt:Date.now()
-    });
-
-    alert("Student added");
-    loadStudents();
-  }catch(e){
-    console.error(e);
-    alert("Student creation failed");
-  }
-};
+/* ---------- LOAD STUDENTS (CLICKABLE) ---------- */
+let chart=null;
 
 async function loadStudents(){
-  studentListDiv.innerHTML="";
+  studentList.innerHTML="";
   const snap=await getDocs(collection(db,"students"));
   snap.forEach(s=>{
     const d=document.createElement("div");
     d.textContent=`${s.data().name} (${s.data().index})`;
-    studentListDiv.appendChild(d);
+    d.onclick=()=>showStudent(s.id,s.data().name);
+    studentList.appendChild(d);
   });
 }
 
-/* ---------------- INIT ---------------- */
-window.goToLeaderboard=()=>location.href="leaderboard.html";
+/* ---------- STUDENT DETAILS ---------- */
+async function showStudent(uid,name){
+  studentDetails.style.display="block";
+  studentTitle.textContent=name;
+  studentExams.innerHTML="";
 
+  const stu=await getDoc(doc(db,"students",uid));
+  const attempts=stu.data().attempts||{};
+  const labels=[],scores=[];
+
+  for(const examId in attempts){
+    const ex=await getDoc(doc(db,"exams",examId));
+    if(ex.exists()){
+      const total=ex.data().questions.length;
+      const pct=(attempts[examId]/total)*100;
+      labels.push(ex.data().title);
+      scores.push(pct);
+      studentExams.innerHTML+=`<div>${ex.data().title}: ${pct.toFixed(2)}%</div>`;
+    }
+  }
+
+  if(chart) chart.destroy();
+  chart=new Chart(studentChart,{
+    type:"line",
+    data:{labels,datasets:[{label:"Percentage",data:scores,borderColor:"blue"}]},
+    options:{scales:{y:{min:0,max:100}}}
+  });
+}
+
+/* ---------- INIT ---------- */
+window.goToLeaderboard=()=>location.href="leaderboard.html";
 loadExams();
 loadStudents();
-
 </script>
 </body>
 </html>
