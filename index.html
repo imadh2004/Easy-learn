@@ -5,112 +5,51 @@
 <title>Easy Learn</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  /* ========== RESET & BASE ========== */
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #6a11cb, #2575fc);
-    color: #333;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+  /* Reset & base */
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body { font-family: 'Arial', sans-serif; background: linear-gradient(135deg, #6b73ff, #000dff); color:#fff; min-height:100vh; display:flex; justify-content:center; align-items:center; }
 
-  /* ========== CONTAINER ========== */
-  .container {
-    width: 90%;
-    max-width: 1000px;
-    text-align: center;
-  }
+  /* Container */
+  .container { width: 95%; max-width: 900px; text-align:center; }
 
-  /* ========== HEADER ========== */
-  h1 {
-    font-size: 2.5rem;
-    color: #fff;
-    margin-bottom: 30px;
-    text-shadow: 1px 1px 8px rgba(0,0,0,0.3);
-  }
+  h1 { font-size: 2.2rem; margin-bottom: 20px; color: #fff; }
 
-  /* ========== CARD STYLES ========== */
-  .cards {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-    margin-bottom: 40px;
-  }
+  /* Cards */
+  .cards { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; margin-bottom:30px; }
+  .card { background: rgba(255,255,255,0.95); color:#000; border-radius:15px; padding:25px 20px; width:200px; transition: transform 0.3s, box-shadow 0.3s; cursor:pointer; box-shadow:0 5px 15px rgba(0,0,0,0.3); position: relative; }
+  .card:hover { transform: translateY(-5px) scale(1.05); box-shadow:0 10px 20px rgba(0,0,0,0.4); }
+  .card h2 { font-size: 1.4rem; margin-bottom:10px; }
+  .card p { font-size: 0.95rem; }
 
-  .card {
-    flex: 1 1 200px;
-    background: #fff;
-    border-radius: 15px;
-    padding: 25px 20px;
-    cursor: pointer;
-    transition: transform 0.3s, box-shadow 0.3s;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  /* Arrow icon */
+  .card::after {
+    content: '➔';
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5rem;
+    color: #6b73ff;
+    transition: transform 0.3s;
   }
-  .card:hover {
-    transform: translateY(-5px) scale(1.05);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-  }
-  .card h2 { margin-bottom: 10px; font-size: 1.5rem; }
-  .card p { font-size: 1rem; color: #555; }
+  .card:hover::after { transform: translateY(-50%) translateX(5px); }
 
-  /* ========== LOGIN BOX ========== */
-  .login-box {
-    background: #fff;
-    padding: 30px;
-    border-radius: 15px;
-    width: 90%;
-    max-width: 400px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    display: none;
-    margin: auto;
-  }
-  .login-box h2 {
-    margin-bottom: 20px;
-    color: #2575fc;
-  }
-  .login-box input {
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    font-size: 1rem;
-  }
-  .login-box button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 15px;
-    background: #2575fc;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background 0.3s;
-  }
-  .login-box button:hover {
-    background: #6a11cb;
-  }
+  /* Login boxes */
+  .login-box { background:white; color:#000; padding:25px; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.3); width:90%; max-width:400px; margin:auto; display:none; }
+  .login-box h2 { margin-bottom:15px; }
+  .login-box input { width:100%; padding:10px; margin:8px 0; border-radius:8px; border:1px solid #ccc; }
+  .login-box button { width:100%; padding:10px; margin-top:10px; border:none; border-radius:8px; background:#6b73ff; color:#fff; font-weight:bold; cursor:pointer; transition: background 0.3s; }
+  .login-box button:hover { background:#000dff; }
 
-  /* ========== BACK BUTTON ========== */
-  .login-box .back-btn {
-    background: #ccc;
-    color: #333;
-    margin-top: 10px;
-  }
-  .login-box .back-btn:hover {
-    background: #aaa;
-  }
+  /* Back buttons */
+  .login-box .back-btn { background:#ccc; color:#000; }
+  .login-box .back-btn:hover { background:#aaa; }
 
-  /* ========== RESPONSIVE ========== */
-  @media (max-width: 600px) {
-    h1 { font-size: 2rem; }
-    .cards { flex-direction: column; }
-    .card { width: 100%; }
+  /* Responsive */
+  @media(max-width:600px){
+    h1 { font-size:1.8rem; }
+    .cards { flex-direction:column; }
+    .card { width:80%; margin:auto; }
   }
 </style>
 </head>
@@ -119,110 +58,99 @@
 <div class="container" id="landing">
   <h1>Welcome to Easy Learn</h1>
   <div class="cards">
-    <div class="card" id="studentBtn">
-      🎓
-      <h2>Student</h2>
-      <p>Login to take exams</p>
-    </div>
-    <div class="card" id="teacherBtn">
-      👨‍🏫
-      <h2>Teacher</h2>
-      <p>Manage students & exams</p>
-    </div>
+    <div class="card" id="studentBtn">🎓 <h2>Student</h2><p>Login to take exams</p></div>
+    <div class="card" id="teacherBtn">👨‍🏫 <h2>Teacher</h2><p>Manage students & exams</p></div>
   </div>
 </div>
 
-<!-- ================= STUDENT LOGIN ================= -->
+<!-- Student Login -->
 <div class="login-box" id="student-login">
   <h2>Student Login</h2>
-  <input type="text" id="studentIndex" placeholder="Index Number"><br>
-  <input type="password" id="studentPassword" placeholder="Password"><br>
+  <input type="text" id="studentIndex" placeholder="Index Number">
+  <input type="password" id="studentPassword" placeholder="Password">
   <button id="studentLoginBtn">Login</button>
   <button class="back-btn" id="studentBackBtn">Back</button>
 </div>
 
-<!-- ================= TEACHER LOGIN ================= -->
+<!-- Teacher Login -->
 <div class="login-box" id="teacher-login">
   <h2>Teacher Login</h2>
-  <input type="email" id="teacherEmail" placeholder="Email"><br>
-  <input type="password" id="teacherPassword" placeholder="Password"><br>
+  <input type="email" id="teacherEmail" placeholder="Email">
+  <input type="password" id="teacherPassword" placeholder="Password">
   <button id="teacherLoginBtn">Login</button>
   <button class="back-btn" id="teacherBackBtn">Back</button>
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-/* ================= FIREBASE ================= */
-const firebaseConfig = {
-  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain: "science-cls.firebaseapp.com",
-  projectId: "science-cls",
-  storageBucket: "science-cls.appspot.com",
-  messagingSenderId: "778012932104",
-  appId: "1:778012932104:web:f997ad31edac581f0b79bd",
-  measurementId: "G-4TCCVY7CKN"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+    authDomain: "science-cls.firebaseapp.com",
+    projectId: "science-cls",
+    storageBucket: "science-cls.appspot.com",
+    messagingSenderId: "778012932104",
+    appId: "1:778012932104:web:f997ad31edac581f0b79bd"
+  };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
 
-/* ================= NAVIGATION ================= */
-const landing = document.getElementById("landing");
-const studentLoginBox = document.getElementById("student-login");
-const teacherLoginBox = document.getElementById("teacher-login");
+  const landing = document.getElementById('landing');
+  const studentLoginBox = document.getElementById('student-login');
+  const teacherLoginBox = document.getElementById('teacher-login');
 
-document.getElementById("studentBtn").onclick = () => {
-  landing.style.display = "none";
-  studentLoginBox.style.display = "block";
-};
-document.getElementById("teacherBtn").onclick = () => {
-  landing.style.display = "none";
-  teacherLoginBox.style.display = "block";
-};
-document.getElementById("studentBackBtn").onclick = () => {
-  studentLoginBox.style.display = "none";
-  landing.style.display = "block";
-};
-document.getElementById("teacherBackBtn").onclick = () => {
-  teacherLoginBox.style.display = "none";
-  landing.style.display = "block";
-};
+  document.getElementById('studentBtn').addEventListener('click', () => {
+    landing.style.display = 'none';
+    studentLoginBox.style.display = 'block';
+  });
 
-/* ================= STUDENT LOGIN (INDEX NUMBER) ================= */
-document.getElementById("studentLoginBtn").onclick = () => {
-  let index = document.getElementById("studentIndex").value.trim();
-  const password = document.getElementById("studentPassword").value;
+  document.getElementById('teacherBtn').addEventListener('click', () => {
+    landing.style.display = 'none';
+    teacherLoginBox.style.display = 'block';
+  });
 
-  if (!index || !password) {
-    alert("Enter index number and password");
-    return;
-  }
+  document.getElementById('studentBackBtn').addEventListener('click', () => {
+    landing.style.display = 'block';
+    studentLoginBox.style.display = 'none';
+  });
 
-  index = index.replace(/\s+/g, "");
-  const email = `easylearn${index}@example.com`;
+  document.getElementById('teacherBackBtn').addEventListener('click', () => {
+    landing.style.display = 'block';
+    teacherLoginBox.style.display = 'none';
+  });
 
-  signInWithEmailAndPassword(auth, email, password)
-    .then(() => {
-      alert("Student login successful!");
-      window.location.href = "student-dashboard.html";
-    })
-    .catch(err => alert("Error: " + err.message));
-};
+  // Student login using index → email
+  document.getElementById('studentLoginBtn').addEventListener('click', () => {
+    let index = document.getElementById('studentIndex').value.trim();
+    const password = document.getElementById('studentPassword').value;
+    if(!index || !password){ alert("Enter index and password"); return; }
 
-/* ================= TEACHER LOGIN ================= */
-document.getElementById("teacherLoginBtn").onclick = () => {
-  const email = document.getElementById("teacherEmail").value;
-  const password = document.getElementById("teacherPassword").value;
+    index = index.replace(/\s+/g,''); 
+    const email = `easylearn${index}@example.com`;
 
-  signInWithEmailAndPassword(auth, email, password)
-    .then(() => {
-      alert("Teacher login successful!");
-      window.location.href = "teacher-dashboard.html";
-    })
-    .catch(err => alert("Error: " + err.message));
-};
+    signInWithEmailAndPassword(auth, email, password)
+      .then(()=> {
+        alert('Student login successful!');
+        window.location.href = 'student-dashboard.html';
+      })
+      .catch(err => alert('Error: ' + err.message));
+  });
+
+  // Teacher login
+  document.getElementById('teacherLoginBtn').addEventListener('click', () => {
+    const email = document.getElementById('teacherEmail').value;
+    const password = document.getElementById('teacherPassword').value;
+    if(!email || !password){ alert("Enter email and password"); return; }
+
+    signInWithEmailAndPassword(auth, email, password)
+      .then(()=> {
+        alert('Teacher login successful!');
+        window.location.href = 'teacher-dashboard.html';
+      })
+      .catch(err => alert('Error: ' + err.message));
+  });
 </script>
 
 </body>
