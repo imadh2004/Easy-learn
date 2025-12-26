@@ -2,172 +2,143 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Student Exams | Easy Learn</title>
+<title>Student Exams</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
   body {
     font-family: Arial, sans-serif;
     background: #f4f6f8;
+    margin: 0;
     padding: 20px;
   }
 
-  h2 {
+  h1 {
     text-align: center;
     margin-bottom: 20px;
   }
 
-  .exam {
+  .exam-list {
+    max-width: 700px;
+    margin: auto;
+  }
+
+  .exam-card {
     background: white;
     padding: 15px;
-    margin: 10px auto;
-    max-width: 600px;
+    margin-bottom: 12px;
     border-radius: 10px;
-    box-shadow: 0 5px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .exam-info {
-    text-align: left;
+  .exam-card.disabled {
+    opacity: 0.5;
   }
 
-  .exam-info h3 {
-    margin: 0 0 5px;
-  }
-
-  .exam-info p {
-    margin: 0;
-    color: #555;
-    font-size: 0.9rem;
+  .exam-title {
+    font-size: 16px;
+    font-weight: bold;
   }
 
   button {
-    padding: 8px 16px;
+    padding: 8px 14px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 0.95rem;
   }
 
   .start-btn {
-    background: #28a745;
-    color: white;
-  }
-
-  .start-btn:hover {
-    background: #1e7e34;
-  }
-
-  .inactive {
-    opacity: 0.6;
-  }
-
-  .inactive button {
-    background: gray;
-    cursor: not-allowed;
-  }
-
-  .back {
-    display: block;
-    margin: 20px auto;
     background: #007bff;
     color: white;
   }
 
-  @media (max-width:600px){
-    .exam {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    .exam button {
-      margin-top: 10px;
-      width: 100%;
-    }
+  .disabled-btn {
+    background: #aaa;
+    color: white;
+    cursor: not-allowed;
   }
 </style>
 </head>
+
 <body>
 
-<h2>Available Exams</h2>
+<h1>Available Exams</h1>
 
-<div id="examList">Loading exams...</div>
-
-<button class="back" onclick="goBack()">⬅ Back to Dashboard</button>
+<div class="exam-list" id="examList"></div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain:"science-cls.firebaseapp.com",
-  projectId:"science-cls",
-  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+    authDomain: "science-cls.firebaseapp.com",
+    projectId: "science-cls",
+    storageBucket: "science-cls.appspot.com",
+    messagingSenderId: "778012932104",
+    appId: "1:778012932104:web:f997ad31edac581f0b79bd"
+  };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-const examListDiv = document.getElementById("examList");
+  const examList = document.getElementById("examList");
 
-async function loadExams(){
-  examListDiv.innerHTML = "";
-
-  const snap = await getDocs(collection(db,"exams"));
-  let exams = [];
-
-  snap.forEach(docSnap=>{
-    exams.push({ id: docSnap.id, ...docSnap.data() });
-  });
-
-  // sort by createdAt (old → new)
-  exams.sort((a,b)=>a.createdAt - b.createdAt);
-
-  if(exams.length === 0){
-    examListDiv.textContent = "No exams available.";
-    return;
-  }
-
-  exams.forEach(exam=>{
-    const div = document.createElement("div");
-    div.className = "exam" + (exam.active ? "" : " inactive");
-
-    div.innerHTML = `
-      <div class="exam-info">
-        <h3>${exam.title}</h3>
-        <p>Duration: ${exam.duration} minutes</p>
-        <p>Status: ${exam.active ? "🟢 Active" : "🔴 Inactive"}</p>
-      </div>
-    `;
-
-    const btn = document.createElement("button");
-    btn.textContent = "Start Exam";
-    btn.className = "start-btn";
-
-    if(!exam.active){
-      btn.disabled = true;
-    } else {
-      btn.onclick = () => startExam(exam.id);
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "index.html";
+      return;
     }
 
-    div.appendChild(btn);
-    examListDiv.appendChild(div);
+    // Fetch student data (attempts)
+    const studentRef = doc(db, "students", user.uid);
+    const studentSnap = await getDoc(studentRef);
+    const attempts = studentSnap.exists() ? (studentSnap.data().attempts || {}) : {};
+
+    // Fetch exams
+    const examsSnap = await getDocs(collection(db, "exams"));
+
+    examList.innerHTML = "";
+
+    examsSnap.forEach(examDoc => {
+      const exam = examDoc.data();
+
+      // Show ONLY active exams
+      if (!exam.active) return;
+
+      const attempted = attempts[examDoc.id];
+
+      const card = document.createElement("div");
+      card.className = "exam-card" + (attempted ? " disabled" : "");
+
+      const title = document.createElement("div");
+      title.className = "exam-title";
+      title.textContent = exam.title;
+
+      const btn = document.createElement("button");
+
+      if (attempted) {
+        btn.textContent = "Attempted";
+        btn.className = "disabled-btn";
+        btn.disabled = true;
+      } else {
+        btn.textContent = "Start Exam";
+        btn.className = "start-btn";
+        btn.onclick = () => {
+          window.location.href = `exam.html?examId=${examDoc.id}`;
+        };
+      }
+
+      card.appendChild(title);
+      card.appendChild(btn);
+      examList.appendChild(card);
+    });
   });
-}
-
-function startExam(examId){
-  // save exam id locally
-  localStorage.setItem("currentExamId", examId);
-  window.location.href = "student-exam-attempt.html";
-}
-
-function goBack(){
-  window.location.href = "student-dashboard.html";
-}
-
-loadExams();
 </script>
 
 </body>
