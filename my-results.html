@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Results | Easy Learn</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #6b73ff, #000dff);
+    min-height: 100vh;
+    color: #fff;
+    margin: 0;
+    padding: 20px;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: auto;
+    background: #fff;
+    color: #000;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #007bff;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 25px;
+  }
+
+  th, td {
+    padding: 12px;
+    border: 1px solid #ccc;
+    text-align: center;
+  }
+
+  th {
+    background-color: #007bff;
+    color: white;
+  }
+
+  tr.gold {
+    background-color: gold;
+    font-weight: bold;
+  }
+
+  canvas {
+    margin-top: 20px;
+  }
+
+  .backBtn {
+    display: block;
+    margin: 20px auto 0;
+    padding: 10px 25px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+
+  .backBtn:hover {
+    background: #0056b3;
+  }
+
+  @media(max-width:600px){
+    table, th, td {
+      font-size: 14px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>My Results</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Exam</th>
+        <th>Score</th>
+        <th>Percentage</th>
+        <th>Rank</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody">
+      <tr><td colspan="4">Loading...</td></tr>
+    </tbody>
+  </table>
+
+  <canvas id="resultsChart" height="200"></canvas>
+  <button class="backBtn" onclick="goBack()">⬅ Back</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain:"science-cls.firebaseapp.com",
+  projectId:"science-cls",
+  storageBucket:"science-cls.appspot.com",
+  messagingSenderId:"778012932104",
+  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const resultsBody = document.getElementById("resultsBody");
+const chartCanvas = document.getElementById("resultsChart");
+
+let myChart = null;
+
+// Check student login
+onAuthStateChanged(auth, async user => {
+  if(!user) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  const uid = user.uid;
+  const studentSnap = await getDoc(doc(db,"students",uid));
+  const attempts = studentSnap.data().attempts || {};
+
+  // Load all exams
+  const examsSnap = await getDocs(collection(db,"exams"));
+  const examsData = [];
+  examsSnap.forEach(docSnap=>{
+    const data = docSnap.data();
+    examsData.push({id: docSnap.id, ...data});
+  });
+
+  // Build results array
+  const results = [];
+  for(const exam of examsData) {
+    if(attempts[exam.id] !== undefined) {
+      const score = attempts[exam.id];
+      const total = exam.questions.length;
+      const percentage = ((score/total)*100).toFixed(2);
+      results.push({title: exam.title, score, total, percentage, createdAt: exam.createdAt});
+    }
+  }
+
+  // Sort by createdAt
+  results.sort((a,b)=>a.createdAt - b.createdAt);
+
+  // Calculate ranks (based on score, descending)
+  const sortedByScore = [...results].sort((a,b)=>b.score - a.score);
+  const ranks = {};
+  sortedByScore.forEach((r,i)=>{
+    ranks[r.title] = i+1;
+  });
+
+  // Populate table
+  resultsBody.innerHTML = "";
+  if(results.length === 0){
+    resultsBody.innerHTML = `<tr><td colspan="4">No results yet</td></tr>`;
+  } else {
+    results.forEach(r=>{
+      const tr = document.createElement("tr");
+      if(ranks[r.title] === 1) tr.classList.add("gold"); // Highlight first rank
+      tr.innerHTML = `
+        <td>${r.title}</td>
+        <td>${r.score}/${r.total}</td>
+        <td>${r.percentage}%</td>
+        <td>${ranks[r.title]}</td>
+      `;
+      resultsBody.appendChild(tr);
+    });
+  }
+
+  // Chart
+  const labels = results.map(r=>r.title);
+  const data = results.map(r=>r.percentage);
+  if(myChart) myChart.destroy();
+  myChart = new Chart(chartCanvas,{
+    type: "line",
+    data:{
+      labels,
+      datasets:[{
+        label:"Percentage",
+        data,
+        borderColor:"#007bff",
+        backgroundColor:"rgba(0,123,255,0.2)",
+        tension:0.3,
+        fill:true,
+        pointRadius:5
+      }]
+    },
+    options:{
+      scales:{y:{min:0,max:100}},
+      responsive:true,
+      plugins:{legend:{display:false}}
+    }
+  });
+});
+
+// Back button
+function goBack(){
+  window.location.href = "student-dashboard.html";
+}
+</script>
+</body>
+</html>
