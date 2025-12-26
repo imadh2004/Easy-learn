@@ -2,119 +2,169 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Student Dashboard</title>
+<title>Student Dashboard | Easy Learn</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-  body { font-family: Arial; background:#f4f6f8; padding:20px; }
-  h2 { text-align:center; }
-  #examsList div { background:white; margin:10px; padding:10px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-  button { padding:5px 10px; margin-top:5px; cursor:pointer; }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #6b73ff, #000dff);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    color:#fff;
+  }
+
+  .container {
+    width: 95%;
+    max-width: 900px;
+    text-align: center;
+  }
+
+  h1 {
+    margin-bottom: 10px;
+    font-size: 2.2rem;
+  }
+
+  p {
+    margin-bottom: 30px;
+    opacity: 0.9;
+  }
+
+  .cards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 25px;
+  }
+
+  .card {
+    background: white;
+    color: #000;
+    width: 220px;
+    padding: 30px 20px;
+    border-radius: 15px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative;
+  }
+
+  .card:hover {
+    transform: translateY(-6px) scale(1.05);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+  }
+
+  .card h2 {
+    margin-top: 10px;
+    font-size: 1.4rem;
+  }
+
+  .card p {
+    margin-top: 8px;
+    font-size: 0.95rem;
+    color: #555;
+  }
+
+  /* Arrow */
+  .card::after {
+    content: "➔";
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5rem;
+    color: #6b73ff;
+    transition: transform 0.3s;
+  }
+
+  .card:hover::after {
+    transform: translateY(-50%) translateX(5px);
+  }
+
+  /* Logout button */
+  .logout {
+    margin-top: 40px;
+  }
+
+  .logout button {
+    padding: 10px 25px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #ff4d4d;
+    color: white;
+    transition: background 0.3s;
+  }
+
+  .logout button:hover {
+    background: #cc0000;
+  }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.8rem; }
+    .cards { flex-direction: column; }
+    .card { width: 85%; margin: auto; }
+  }
 </style>
 </head>
 <body>
-<h2>Student Dashboard</h2>
-<div id="examsList">Loading exams...</div>
-<button onclick="logout()">Logout</button>
+
+<div class="container">
+  <h1>Welcome to Easy Learn</h1>
+  <p>Select an option to continue</p>
+
+  <div class="cards">
+    <div class="card" onclick="goToExams()">
+      📝
+      <h2>Exams</h2>
+      <p>View and attempt available exams</p>
+    </div>
+
+    <div class="card" onclick="goToLeaderboard()">
+      🏆
+      <h2>Leaderboard</h2>
+      <p>Check your ranking & performance</p>
+    </div>
+  </div>
+
+  <div class="logout">
+    <button onclick="logout()">Logout</button>
+  </div>
+</div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain: "science-cls.firebaseapp.com",
-  projectId: "science-cls",
-  storageBucket: "science-cls.appspot.com",
-  messagingSenderId: "778012932104",
-  appId: "1:778012932104:web:f997ad31edac581f0b79bd",
-  measurementId: "G-4TCCVY7CKN"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+    authDomain: "science-cls.firebaseapp.com",
+    projectId: "science-cls",
+    storageBucket: "science-cls.appspot.com",
+    messagingSenderId: "778012932104",
+    appId: "1:778012932104:web:f997ad31edac581f0b79bd"
+  };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
 
-let currentUser = null;
+  window.goToExams = () => {
+    window.location.href = "student-exams.html";
+  };
 
-// Check if student is logged in
-onAuthStateChanged(auth, user => {
-  if (!user) {
-    window.location.href = 'index.html';
-  } else {
-    currentUser = user;
-    loadExams(user.uid);
+  window.goToLeaderboard = () => {
+    window.location.href = "leaderboard.html";
+  };
 
-    // Real-time exam updates
-    onSnapshot(collection(db, "exams"), () => {
-      loadExams(user.uid);
-    });
-  }
-});
-
-// Load exams with access control
-async function loadExams(uid) {
-  const studentSnap = await getDoc(doc(db, 'students', uid));
-  const studentData = studentSnap.data();
-  const attempts = studentData?.attempts || {};
-
-  const examsCollection = collection(db, 'exams');
-  const examsSnap = await getDocs(examsCollection);
-  const examsDiv = document.getElementById('examsList');
-  examsDiv.innerHTML = '';
-
-  const examsArray = [];
-  examsSnap.forEach(docSnap => {
-    examsArray.push({id: docSnap.id, ...docSnap.data()});
-  });
-
-  // Sort exams by creation time
-  examsArray.sort((a,b) => a.createdAt - b.createdAt);
-
-  examsArray.forEach(exam => {
-    const attempted = attempts[exam.id] ? true : false;
-    const isActive = exam.active || false;
-
-    const div = document.createElement('div');
-    div.innerHTML = `<strong>${exam.title}</strong><br>
-                     ${attempted ? '✅ Already Attempted'
-                     : isActive ? `<button onclick="startExam('${exam.id}')">Start Exam</button>`
-                     : '❌ Exam not available'}`;
-    examsDiv.appendChild(div);
-  });
-}
-
-// Start exam (with enforced access control)
-window.startExam = async function(examId) {
-  const examSnap = await getDoc(doc(db, "exams", examId));
-  if (!examSnap.exists()) {
-    alert("Exam not found!");
-    return;
-  }
-  const examData = examSnap.data();
-  if (!examData.active) {
-    alert("This exam is not active yet!");
-    return;
-  }
-
-  const studentSnap = await getDoc(doc(db,"students",currentUser.uid));
-  const attempts = studentSnap.data()?.attempts || {};
-  if (attempts[examId]) {
-    alert("You have already attempted this exam.");
-    return;
-  }
-
-  localStorage.setItem('currentExamId', examId);
-  window.location.href = 'exam.html';
-}
-
-// Logout
-function logout() {
-  signOut(auth).then(() => { window.location.href = 'index.html'; });
-}
-window.logout = logout;
-
+  window.logout = async () => {
+    await signOut(auth);
+    window.location.href = "index.html";
+  };
 </script>
+
 </body>
 </html>
