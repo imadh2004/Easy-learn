@@ -15,7 +15,7 @@ h2,h3,h4 {
   text-align: center;
   color: #007bff;
 }
-input, button {
+input, button, select {
   padding: 8px;
   margin: 5px;
   border-radius: 6px;
@@ -72,16 +72,28 @@ button:hover {
 canvas {
   margin-top: 15px;
 }
-input:focus {
+input:focus, select:focus {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 4px rgba(0,123,255,0.3);
 }
+
+/* ================= ENHANCED ANSWER DROPDOWN ================= */
+.questionDiv select.answerSelect {
+  width: 100%;        
+  padding: 10px;      
+  font-size: 16px;    
+  border-radius: 6px; 
+  border: 1px solid #007bff;
+  background: #f0f8ff;
+  margin-top: 5px;
+}
+
 @media(max-width:768px){
   .examDiv, #studentList div {
     flex: 1 1 100%;
   }
-  input, button {
+  input, button, select {
     width: 100%;
   }
 }
@@ -292,7 +304,11 @@ async function showStudent(uid,name){
     const pct = (ex.score/total)*100;
     labels.push(ex.title);
     scores.push(pct);
-    studentExams.innerHTML+=`<div>${ex.title}: ${pct.toFixed(2)}%</div>`;
+    studentExams.innerHTML+=`
+      <div>
+        ${ex.title}: ${pct.toFixed(2)}%
+        <button onclick="resetAttempt('${uid}','${ex.id}')">Reset Attempt</button>
+      </div>`;
   });
 
   if(chart) chart.destroy();
@@ -301,6 +317,20 @@ async function showStudent(uid,name){
     data:{labels,datasets:[{label:"Percentage",data:scores,borderColor:"#007bff",backgroundColor:"rgba(0,123,255,0.1)"}]},
     options:{scales:{y:{min:0,max:100}}}
   });
+}
+
+/* ================= RESET ATTEMPT ================= */
+window.resetAttempt = async (studentId, examId) => {
+  if(!confirm("Are you sure you want to reset this attempt?")) return;
+  const stuRef = doc(db,"students",studentId);
+  const stuSnap = await getDoc(stuRef);
+  const data = stuSnap.data();
+  if(data.attempts && data.attempts[examId]) {
+    delete data.attempts[examId];
+    await updateDoc(stuRef,{attempts:data.attempts});
+    alert("Attempt reset successfully!");
+    showStudent(studentId,data.name);
+  }
 }
 
 /* ================= INIT ================= */
