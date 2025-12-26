@@ -24,10 +24,13 @@
     box-shadow: 0 8px 25px rgba(0,0,0,0.3);
   }
 
-  h1 {
+  h1, h2 {
     text-align: center;
-    margin-bottom: 10px;
     color: #007bff;
+  }
+
+  h2 {
+    margin-bottom: 20px;
   }
 
   table {
@@ -84,6 +87,8 @@
 
 <div class="container">
   <h1>My Results</h1>
+  <h2 id="studentName">Loading...</h2>
+
   <table>
     <thead>
       <tr>
@@ -99,7 +104,7 @@
   </table>
 
   <canvas id="resultsChart" height="200"></canvas>
-  <button class="backBtn" onclick="goBack()">⬅ Back</button>
+  <button class="backBtn" id="backBtn">⬅ Back</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -124,6 +129,8 @@ const db = getFirestore(app);
 
 const resultsBody = document.getElementById("resultsBody");
 const chartCanvas = document.getElementById("resultsChart");
+const studentNameElem = document.getElementById("studentName");
+const backBtn = document.getElementById("backBtn");
 
 let myChart = null;
 
@@ -136,7 +143,11 @@ onAuthStateChanged(auth, async user => {
 
   const uid = user.uid;
   const studentSnap = await getDoc(doc(db,"students",uid));
-  const attempts = studentSnap.data().attempts || {};
+  const studentData = studentSnap.data();
+  const attempts = studentData.attempts || {};
+
+  // Show student name
+  studentNameElem.textContent = studentData.name;
 
   // Load all exams
   const examsSnap = await getDocs(collection(db,"exams"));
@@ -160,7 +171,7 @@ onAuthStateChanged(auth, async user => {
   // Sort by createdAt
   results.sort((a,b)=>a.createdAt - b.createdAt);
 
-  // Calculate ranks (based on score, descending)
+  // Calculate ranks (based on score descending)
   const sortedByScore = [...results].sort((a,b)=>b.score - a.score);
   const ranks = {};
   sortedByScore.forEach((r,i)=>{
@@ -174,7 +185,7 @@ onAuthStateChanged(auth, async user => {
   } else {
     results.forEach(r=>{
       const tr = document.createElement("tr");
-      if(ranks[r.title] === 1) tr.classList.add("gold"); // Highlight first rank
+      if(ranks[r.title] === 1) tr.classList.add("gold");
       tr.innerHTML = `
         <td>${r.title}</td>
         <td>${r.score}/${r.total}</td>
@@ -212,9 +223,9 @@ onAuthStateChanged(auth, async user => {
 });
 
 // Back button
-function goBack(){
+backBtn.addEventListener("click", () => {
   window.location.href = "student-dashboard.html";
-}
+});
 </script>
 </body>
 </html>
