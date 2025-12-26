@@ -1,27 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Exam</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{font-family:Arial;background:#f4f6f8;padding:20px}
-.question{background:#fff;padding:15px;margin:10px 0;border-radius:8px}
-button{padding:8px 15px;margin-top:15px;cursor:pointer}
-#timer{font-weight:bold;font-size:20px;color:#007bff;margin-bottom:15px;}
+  body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #f4f6f8 0%, #e8eff5 100%);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .container {
+    width: 100%;
+    max-width: 800px;
+    margin: 20px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    padding: 30px;
+    box-sizing: border-box;
+  }
+  h2 {
+    text-align: center;
+    color: #007bff;
+    margin-bottom: 20px;
+  }
+  #timer {
+    font-weight: bold;
+    font-size: 22px;
+    color: #ff4d4d;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .question {
+    background: #f9f9f9;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    border-left: 5px solid #007bff;
+  }
+  .question b {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 16px;
+  }
+  .options input[type="radio"] {
+    margin-right: 10px;
+  }
+  button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+    display: block;
+    margin: 20px auto 0 auto;
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+  @media (max-width: 600px) {
+    .container {
+      padding: 20px;
+    }
+    .question {
+      padding: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+    }
+  }
 </style>
 </head>
 <body>
-
-<h2>Exam</h2>
-<div id="timer">Loading timer...</div>
-<div id="examContent">Loading exam...</div>
+<div class="container">
+  <h2>Exam</h2>
+  <div id="timer">Loading timer...</div>
+  <div id="examContent">Loading exam...</div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-/* Firebase config */
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain:"science-cls.firebaseapp.com",
@@ -35,17 +105,12 @@ const db = getFirestore(app);
 
 let timerInterval;
 
-/* AUTH CHECK */
 onAuthStateChanged(auth, async user => {
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
-
+  if (!user) { window.location.href = "index.html"; return; }
   const uid = user.uid;
+
   const studentRef = doc(db,"students",uid);
   const studentSnap = await getDoc(studentRef);
-
   if(!studentSnap.exists()){
     await setDoc(studentRef,{
       name:"New Student",
@@ -58,49 +123,27 @@ onAuthStateChanged(auth, async user => {
   loadExam(uid);
 });
 
-/* LOAD EXAM */
 async function loadExam(uid){
   const examId = localStorage.getItem("currentExamId");
-  if(!examId){
-    alert("No exam selected");
-    window.location.href="student-dashboard.html";
-    return;
-  }
+  if(!examId){ alert("No exam selected"); window.location.href="student-dashboard.html"; return; }
 
   const examSnap = await getDoc(doc(db,"exams",examId));
-  if(!examSnap.exists()){
-    alert("Exam not found");
-    window.location.href="student-dashboard.html";
-    return;
-  }
+  if(!examSnap.exists()){ alert("Exam not found"); window.location.href="student-dashboard.html"; return; }
 
   const examData = examSnap.data();
 
-  /* ✅ FIXED ATTEMPT CHECK */
   const studentSnap = await getDoc(doc(db,"students",uid));
   const attempts = studentSnap.data().attempts || {};
+  // No popup; allow reattempt if needed
 
-  if (Object.prototype.hasOwnProperty.call(attempts, examId)) {
-    alert("You already attempted this exam");
-    window.location.href="student-dashboard.html";
-    return;
-  }
-
-  /* RENDER EXAM */
   const container = document.getElementById("examContent");
-  container.innerHTML = `<h3>${examData.title}</h3>`;
+  container.innerHTML = `<h3 style="text-align:center;color:#007bff;">${examData.title}</h3>`;
 
   examData.questions.forEach((q,i)=>{
     const div = document.createElement("div");
     div.className="question";
-    div.innerHTML = `
-      <b>Q${i+1}: ${q.q}</b><br>
-      ${q.options.map((opt,j)=>`
-        <label>
-          <input type="radio" name="q${i}" value="${j}"> ${opt}
-        </label><br>
-      `).join("")}
-    `;
+    div.innerHTML=`<b>Q${i+1}: ${q.q}</b>` +
+      q.options.map((opt,j)=>`<div class="options"><input type="radio" name="q${i}" value="${j}"> ${opt}</div>`).join("");
     container.appendChild(div);
   });
 
@@ -112,48 +155,38 @@ async function loadExam(uid){
   startTimer(examData.duration, uid, examId, examData.questions);
 }
 
-/* TIMER */
 function startTimer(durationMinutes, uid, examId, questions){
   const timerDiv = document.getElementById("timer");
   let time = durationMinutes * 60;
 
   timerInterval = setInterval(()=>{
-    const minutes = Math.floor(time/60);
-    const seconds = time % 60;
-    timerDiv.textContent =
-      `Time Remaining: ${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-
+    let minutes = Math.floor(time/60);
+    let seconds = time % 60;
+    timerDiv.textContent = `Time Remaining: ${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
     time--;
 
-    if(time < 0){
+    if(time<0){
       clearInterval(timerInterval);
-      alert("Time's up! Auto submitting exam.");
+      alert("Time's up! Auto-submitting your exam.");
       submitExam(uid,examId,questions);
     }
   },1000);
 }
 
-/* SUBMIT EXAM */
 async function submitExam(uid,examId,questions){
   clearInterval(timerInterval);
-
-  let score = 0;
+  let score=0;
   questions.forEach((q,i)=>{
     const selected = document.querySelector(`input[name="q${i}"]:checked`);
-    if(selected && parseInt(selected.value) === q.answer){
-      score++;
-    }
+    if(selected && parseInt(selected.value)===q.answer) score++;
   });
 
   const studentRef = doc(db,"students",uid);
-  await setDoc(studentRef,{
-    attempts:{ [examId]: score }
-  },{ merge:true });
+  await setDoc(studentRef,{attempts:{[examId]:score}},{merge:true});
 
   alert(`Exam submitted! Your score: ${score}`);
   window.location.href="student-dashboard.html";
 }
 </script>
-
 </body>
 </html>
