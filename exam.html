@@ -104,12 +104,15 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let timerInterval;
+let examDataGlobal = null;
+let uidGlobal = null;
+let examIdGlobal = null;
 
 onAuthStateChanged(auth, async user => {
   if (!user) { window.location.href = "index.html"; return; }
-  const uid = user.uid;
+  uidGlobal = user.uid;
 
-  const studentRef = doc(db,"students",uid);
+  const studentRef = doc(db,"students",uidGlobal);
   const studentSnap = await getDoc(studentRef);
   if(!studentSnap.exists()){
     await setDoc(studentRef,{
@@ -120,26 +123,23 @@ onAuthStateChanged(auth, async user => {
     });
   }
 
-  loadExam(uid);
+  loadExam(uidGlobal);
 });
 
+// Load exam
 async function loadExam(uid){
-  const examId = localStorage.getItem("currentExamId");
-  if(!examId){ alert("No exam selected"); window.location.href="student-dashboard.html"; return; }
+  examIdGlobal = localStorage.getItem("currentExamId");
+  if(!examIdGlobal){ alert("No exam selected"); window.location.href="student-dashboard.html"; return; }
 
-  const examSnap = await getDoc(doc(db,"exams",examId));
+  const examSnap = await getDoc(doc(db,"exams",examIdGlobal));
   if(!examSnap.exists()){ alert("Exam not found"); window.location.href="student-dashboard.html"; return; }
 
-  const examData = examSnap.data();
-
-  const studentSnap = await getDoc(doc(db,"students",uid));
-  const attempts = studentSnap.data().attempts || {};
-  // No popup; allow reattempt if needed
+  examDataGlobal = examSnap.data();
 
   const container = document.getElementById("examContent");
-  container.innerHTML = `<h3 style="text-align:center;color:#007bff;">${examData.title}</h3>`;
+  container.innerHTML = `<h3 style="text-align:center;color:#007bff;">${examDataGlobal.title}</h3>`;
 
-  examData.questions.forEach((q,i)=>{
+  examDataGlobal.questions.forEach((q,i)=>{
     const div = document.createElement("div");
     div.className="question";
     div.innerHTML=`<b>Q${i+1}: ${q.q}</b>` +
@@ -149,12 +149,13 @@ async function loadExam(uid){
 
   const submitBtn = document.createElement("button");
   submitBtn.textContent="Submit Exam";
-  submitBtn.onclick = ()=>submitExam(uid,examId,examData.questions);
+  submitBtn.onclick = ()=>submitExam(uid,examIdGlobal,examDataGlobal.questions);
   container.appendChild(submitBtn);
 
-  startTimer(examData.duration, uid, examId, examData.questions);
+  startTimer(examDataGlobal.duration, uid, examIdGlobal, examDataGlobal.questions);
 }
 
+// Timer
 function startTimer(durationMinutes, uid, examId, questions){
   const timerDiv = document.getElementById("timer");
   let time = durationMinutes * 60;
@@ -173,6 +174,7 @@ function startTimer(durationMinutes, uid, examId, questions){
   },1000);
 }
 
+// Submit exam
 async function submitExam(uid,examId,questions){
   clearInterval(timerInterval);
   let score=0;
@@ -187,6 +189,19 @@ async function submitExam(uid,examId,questions){
   alert(`Exam submitted! Your score: ${score}`);
   window.location.href="student-dashboard.html";
 }
+
+// Warn on reload/back
+window.addEventListener("beforeunload", function (e) {
+  e.preventDefault();
+  e.returnValue = "You have an ongoing exam. Leaving will auto-submit your answers.";
+});
+
+window.addEventListener("unload", async function () {
+  if (examDataGlobal && uidGlobal && examIdGlobal) {
+    const questions = examDataGlobal.questions;
+    await submitExam(uidGlobal, examIdGlobal, questions);
+  }
+});
 </script>
 </body>
 </html>
