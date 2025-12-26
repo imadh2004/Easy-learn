@@ -129,6 +129,12 @@
       <h2>Leaderboard</h2>
       <p>Check your ranking & performance</p>
     </div>
+
+    <div class="card" onclick="goToMyResults()">
+      📊
+      <h2>My Results</h2>
+      <p>View all your exam results</p>
+    </div>
   </div>
 
   <div class="logout">
@@ -158,6 +164,10 @@
 
   window.goToLeaderboard = () => {
     window.location.href = "leaderboard.html";
+  };
+
+  window.goToMyResults = () => {
+    window.location.href = "my-results.html"; // <-- New results page
   };
 
   window.logout = async () => {
