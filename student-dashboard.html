@@ -28,6 +28,12 @@
     font-size: 2.2rem;
   }
 
+  h2 {
+    margin-bottom: 30px;
+    font-size: 1.5rem;
+    opacity: 0.9;
+  }
+
   p {
     margin-bottom: 30px;
     opacity: 0.9;
@@ -106,6 +112,7 @@
 
   @media (max-width: 600px) {
     h1 { font-size: 1.8rem; }
+    h2 { font-size: 1.2rem; }
     .cards { flex-direction: column; }
     .card { width: 85%; margin: auto; }
   }
@@ -115,6 +122,7 @@
 
 <div class="container">
   <h1>Welcome to Easy Learn</h1>
+  <h2 id="studentName">Loading...</h2>
   <p>Select an option to continue</p>
 
   <div class="cards">
@@ -143,8 +151,9 @@
 </div>
 
 <script type="module">
-  import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
@@ -157,18 +166,27 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  const db = getFirestore(app);
 
-  window.goToExams = () => {
-    window.location.href = "student-exams.html";
-  };
+  const studentNameElem = document.getElementById("studentName");
 
-  window.goToLeaderboard = () => {
-    window.location.href = "leaderboard.html";
-  };
+  // Show logged-in student name
+  onAuthStateChanged(auth, async user => {
+    if(!user) {
+      window.location.href = "index.html";
+      return;
+    }
+    const uid = user.uid;
+    const studentSnap = await getDoc(doc(db,"students",uid));
+    if(studentSnap.exists()){
+      const data = studentSnap.data();
+      studentNameElem.textContent = data.name;
+    }
+  });
 
-  window.goToMyResults = () => {
-    window.location.href = "my-results.html"; // <-- New results page
-  };
+  window.goToExams = () => { window.location.href = "student-exams.html"; };
+  window.goToLeaderboard = () => { window.location.href = "leaderboard.html"; };
+  window.goToMyResults = () => { window.location.href = "my-results.html"; };
 
   window.logout = async () => {
     await signOut(auth);
