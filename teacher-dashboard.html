@@ -3,31 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <title>Teacher Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{font-family:Arial;background:#f4f6f8;padding:20px}
-h2,h3,h4{text-align:center}
-input,button{padding:8px;margin:5px}
-#studentList div,#examsList div,.questionDiv{
-  background:#fff;padding:10px;margin:6px;border-radius:6px;
-  box-shadow:0 1px 5px rgba(0,0,0,.1);cursor:pointer
+body {
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(135deg, #f4f6f8 0%, #e8eff5 100%);
+  margin: 0;
+  padding: 20px;
 }
-.examDiv{display:flex;justify-content:space-between;align-items:center}
-#studentDetails{
-  background:#fff;padding:15px;border-radius:8px;margin-top:15px
+h2,h3,h4 {
+  text-align: center;
+  color: #007bff;
+}
+input, button {
+  padding: 8px;
+  margin: 5px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+button {
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+button:hover {
+  background-color: #0056b3;
+}
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 15px 0;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+#examsList, #studentList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.examDiv, #studentList div {
+  flex: 1 1 220px;
+  background: #f9f9f9;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.examDiv:hover, #studentList div:hover {
+  transform: translateY(-3px);
+}
+#studentDetails {
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  margin-top:15px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.1);
+}
+canvas {
+  margin-top: 15px;
+}
+input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 4px rgba(0,123,255,0.3);
+}
+@media(max-width:768px){
+  .examDiv, #studentList div {
+    flex: 1 1 100%;
+  }
+  input, button {
+    width: 100%;
+  }
 }
 </style>
 </head>
 <body>
 
+<div class="container">
+
 <h2>Teacher Dashboard</h2>
 <button onclick="goToLeaderboard()">🏆 View Leaderboard</button>
-<hr>
 
 <!-- ================= EXAM CREATION ================= -->
+<div class="section">
 <h3>Create Exam</h3>
-<input id="examTitle" placeholder="Exam Title"><br>
-<input id="examDuration" type="number" placeholder="Duration (minutes)"><br>
-
+<input id="examTitle" placeholder="Exam Title">
+<input id="examDuration" type="number" placeholder="Duration (minutes)">
 <div id="questionsContainer">
 <h4>Questions</h4>
 <div class="questionDiv">
@@ -44,24 +115,22 @@ input,button{padding:8px;margin:5px}
 </select>
 </div>
 </div>
-
-<button onclick="addQuestion()">Add Question</button>
-<button onclick="createExam()">Create Exam</button>
-
+<button onclick="addQuestion()">➕ Add Question</button>
+<button onclick="createExam()">✅ Create Exam</button>
 <h4>Current Exams</h4>
-<div id="examsList"></div>
-
-<hr>
+<div id="examsList">Loading exams...</div>
+</div>
 
 <!-- ================= STUDENT REGISTRATION ================= -->
+<div class="section">
 <h3>Register Student</h3>
 <input id="studentName" placeholder="Name with Initials">
 <input id="studentIndex" placeholder="Index Number">
 <input id="studentPassword" type="password" placeholder="Password">
-<button onclick="registerStudent()">Add Student</button>
-
+<button onclick="registerStudent()">➕ Add Student</button>
 <h4>Students</h4>
-<div id="studentList"></div>
+<div id="studentList">Loading students...</div>
+</div>
 
 <!-- ================= STUDENT DETAILS ================= -->
 <div id="studentDetails" style="display:none">
@@ -70,24 +139,21 @@ input,button{padding:8px;margin:5px}
   <canvas id="studentChart"></canvas>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import {
-  getFirestore, collection, getDocs,
-  doc, setDoc, getDoc, updateDoc
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-/* ================= FIREBASE ================= */
+/* Firebase Config */
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain:"science-cls.firebaseapp.com",
   projectId:"science-cls",
   appId:"1:778012932104:web:f997ad31edac581f0b79bd"
 };
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -129,13 +195,11 @@ window.createExam = async () => {
     const a=Number(q.querySelector(".answerSelect").value);
     if(t && o.every(v=>v)) questions.push({q:t,options:o,answer:a});
   });
-
   if(!questions.length) return alert("Add at least one question");
 
   await setDoc(doc(collection(db,"exams")),{
     title,duration,questions,active:false,createdAt:Date.now()
   });
-
   examTitle.value="";
   examDuration.value="";
   loadExams();
@@ -148,7 +212,6 @@ async function loadExams(){
   const exams=[];
   snap.forEach(s=>exams.push({id:s.id,...s.data()}));
   exams.sort((a,b)=>a.createdAt-b.createdAt);
-
   exams.forEach(e=>{
     const d=document.createElement("div");
     d.className="examDiv";
@@ -158,7 +221,6 @@ async function loadExams(){
     examsList.appendChild(d);
   });
 }
-
 async function toggleExam(id){
   const r=doc(db,"exams",id);
   const s=await getDoc(r);
@@ -171,9 +233,7 @@ window.registerStudent = async () => {
   const name=studentName.value.trim();
   let index=studentIndex.value.trim();
   const password=studentPassword.value;
-
   if(!name||!index||!password) return alert("Fill all fields");
-
   index=index.replace(/\s+/g,"");
   const email=`easylearn${index}@example.com`;
 
@@ -191,7 +251,6 @@ window.registerStudent = async () => {
 /* ================= STUDENTS ================= */
 let chart=null;
 let selectedStudentId=null;
-
 async function loadStudents(){
   studentList.innerHTML="";
   const snap=await getDocs(collection(db,"students"));
@@ -203,16 +262,14 @@ async function loadStudents(){
   });
 }
 
-/* ================= STUDENT DETAILS (TOGGLE FIX) ================= */
+/* ================= STUDENT DETAILS (TOGGLE + SORT) ================= */
 async function showStudent(uid,name){
-
   if(selectedStudentId===uid){
     studentDetails.style.display="none";
     selectedStudentId=null;
     if(chart) chart.destroy();
     return;
   }
-
   selectedStudentId=uid;
   studentDetails.style.display="block";
   studentTitle.textContent=name;
@@ -222,21 +279,26 @@ async function showStudent(uid,name){
   const attempts=stu.data().attempts||{};
   const labels=[],scores=[];
 
-  for(const examId in attempts){
-    const ex=await getDoc(doc(db,"exams",examId));
-    if(ex.exists()){
-      const total=ex.data().questions.length;
-      const pct=(attempts[examId]/total)*100;
-      labels.push(ex.data().title);
-      scores.push(pct);
-      studentExams.innerHTML+=`<div>${ex.data().title}: ${pct.toFixed(2)}%</div>`;
-    }
-  }
+  const examPromises = Object.keys(attempts).map(async examId => {
+    const ex = await getDoc(doc(db,"exams",examId));
+    if(ex.exists()) return {id:examId,...ex.data(),score:attempts[examId]};
+    return null;
+  });
+  let exams = (await Promise.all(examPromises)).filter(e => e!==null);
+  exams.sort((a,b)=>a.createdAt - b.createdAt);
+
+  exams.forEach(ex=>{
+    const total = ex.questions.length;
+    const pct = (ex.score/total)*100;
+    labels.push(ex.title);
+    scores.push(pct);
+    studentExams.innerHTML+=`<div>${ex.title}: ${pct.toFixed(2)}%</div>`;
+  });
 
   if(chart) chart.destroy();
-  chart=new Chart(studentChart,{
+  chart = new Chart(studentChart,{
     type:"line",
-    data:{labels,datasets:[{label:"Percentage",data:scores,borderColor:"blue"}]},
+    data:{labels,datasets:[{label:"Percentage",data:scores,borderColor:"#007bff",backgroundColor:"rgba(0,123,255,0.1)"}]},
     options:{scales:{y:{min:0,max:100}}}
   });
 }
