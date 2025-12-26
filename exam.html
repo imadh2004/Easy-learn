@@ -1,164 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Exam</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
-:root{
-  --primary:#2563eb;
-  --bg:#f4f6f8;
-  --card:#ffffff;
-  --text:#1f2937;
-  --border:#e5e7eb;
-}
-
-*{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family: "Segoe UI", Arial, sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
-
-.container{
-  max-width:900px;
-  margin:auto;
-  padding:16px;
-}
-
-/* Header */
-.header{
-  background:linear-gradient(135deg,#2563eb,#1e40af);
-  color:white;
-  padding:20px;
-  border-radius:12px;
-  margin-bottom:20px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  flex-wrap:wrap;
-}
-
-.header h2{
-  margin:0;
-  font-size:22px;
-}
-
-/* Timer */
-#timer{
-  background:white;
-  color:var(--primary);
-  padding:10px 16px;
-  border-radius:8px;
-  font-weight:bold;
-  font-size:18px;
-  min-width:160px;
-  text-align:center;
-}
-
-/* Exam Card */
-.exam-card{
-  background:var(--card);
-  border-radius:14px;
-  padding:20px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.08);
-}
-
-/* Question */
-.question{
-  background:#f9fafb;
-  border:1px solid var(--border);
-  padding:16px;
-  border-radius:10px;
-  margin-bottom:15px;
-}
-
-.question b{
-  display:block;
-  margin-bottom:10px;
-  font-size:16px;
-}
-
-.option{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin:8px 0;
-  padding:6px;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-.option:hover{
-  background:#eef2ff;
-}
-
-.option input{
-  transform:scale(1.2);
-}
-
-/* Submit button */
-.submit-wrapper{
-  position:sticky;
-  bottom:0;
-  background:linear-gradient(to top, rgba(244,246,248,1), rgba(244,246,248,0));
-  padding:20px 0;
-  text-align:center;
-}
-
-button{
-  background:var(--primary);
-  color:white;
-  border:none;
-  padding:14px 30px;
-  font-size:16px;
-  border-radius:10px;
-  cursor:pointer;
-  font-weight:600;
-  box-shadow:0 6px 20px rgba(37,99,235,0.4);
-}
-
-button:hover{
-  background:#1d4ed8;
-}
-
-/* Mobile */
-@media(max-width:600px){
-  .header{
-    flex-direction:column;
-    gap:10px;
-    text-align:center;
-  }
-  #timer{
-    width:100%;
-  }
-}
+body{font-family:Arial;background:#f4f6f8;padding:20px}
+.question{background:#fff;padding:15px;margin:10px 0;border-radius:8px}
+button{padding:8px 15px;margin-top:15px;cursor:pointer}
+#timer{font-weight:bold;font-size:20px;color:#007bff;margin-bottom:15px;}
 </style>
 </head>
 <body>
 
-<div class="container">
-
-  <div class="header">
-    <h2>📝 Online Examination</h2>
-    <div id="timer">Loading...</div>
-  </div>
-
-  <div class="exam-card" id="examContent">
-    Loading exam...
-  </div>
-
-</div>
+<h2>Exam</h2>
+<div id="timer">Loading timer...</div>
+<div id="examContent">Loading exam...</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-// Firebase config
+/* Firebase config */
 const firebaseConfig = {
   apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
   authDomain:"science-cls.firebaseapp.com",
@@ -172,12 +35,17 @@ const db = getFirestore(app);
 
 let timerInterval;
 
+/* AUTH CHECK */
 onAuthStateChanged(auth, async user => {
-  if (!user) { window.location.href = "index.html"; return; }
-  const uid = user.uid;
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
 
+  const uid = user.uid;
   const studentRef = doc(db,"students",uid);
   const studentSnap = await getDoc(studentRef);
+
   if(!studentSnap.exists()){
     await setDoc(studentRef,{
       name:"New Student",
@@ -190,87 +58,99 @@ onAuthStateChanged(auth, async user => {
   loadExam(uid);
 });
 
+/* LOAD EXAM */
 async function loadExam(uid){
   const examId = localStorage.getItem("currentExamId");
-  if(!examId){ alert("No exam selected"); window.location.href="student-dashboard.html"; return; }
+  if(!examId){
+    alert("No exam selected");
+    window.location.href="student-dashboard.html";
+    return;
+  }
 
   const examSnap = await getDoc(doc(db,"exams",examId));
-  if(!examSnap.exists()){ alert("Exam not found"); window.location.href="student-dashboard.html"; return; }
+  if(!examSnap.exists()){
+    alert("Exam not found");
+    window.location.href="student-dashboard.html";
+    return;
+  }
 
   const examData = examSnap.data();
 
+  /* ✅ FIXED ATTEMPT CHECK */
   const studentSnap = await getDoc(doc(db,"students",uid));
   const attempts = studentSnap.data().attempts || {};
-  if(attempts[examId]){
+
+  if (Object.prototype.hasOwnProperty.call(attempts, examId)) {
     alert("You already attempted this exam");
     window.location.href="student-dashboard.html";
     return;
   }
 
+  /* RENDER EXAM */
   const container = document.getElementById("examContent");
-  container.innerHTML = `<h3 style="margin-bottom:20px">${examData.title}</h3>`;
+  container.innerHTML = `<h3>${examData.title}</h3>`;
 
   examData.questions.forEach((q,i)=>{
     const div = document.createElement("div");
     div.className="question";
     div.innerHTML = `
-      <b>Question ${i+1}</b>
-      <div>${q.q}</div>
+      <b>Q${i+1}: ${q.q}</b><br>
       ${q.options.map((opt,j)=>`
-        <label class="option">
-          <input type="radio" name="q${i}" value="${j}">
-          ${opt}
-        </label>
+        <label>
+          <input type="radio" name="q${i}" value="${j}"> ${opt}
+        </label><br>
       `).join("")}
     `;
     container.appendChild(div);
   });
 
-  const submitWrap = document.createElement("div");
-  submitWrap.className="submit-wrapper";
-
   const submitBtn = document.createElement("button");
   submitBtn.textContent="Submit Exam";
   submitBtn.onclick = ()=>submitExam(uid,examId,examData.questions);
-
-  submitWrap.appendChild(submitBtn);
-  container.appendChild(submitWrap);
+  container.appendChild(submitBtn);
 
   startTimer(examData.duration, uid, examId, examData.questions);
 }
 
+/* TIMER */
 function startTimer(durationMinutes, uid, examId, questions){
   const timerDiv = document.getElementById("timer");
   let time = durationMinutes * 60;
 
   timerInterval = setInterval(()=>{
-    let minutes = Math.floor(time/60);
-    let seconds = time % 60;
-    timerDiv.textContent = `⏳ ${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    const minutes = Math.floor(time/60);
+    const seconds = time % 60;
+    timerDiv.textContent =
+      `Time Remaining: ${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+
     time--;
 
     if(time < 0){
       clearInterval(timerInterval);
-      alert("Time's up! Auto submitting.");
+      alert("Time's up! Auto submitting exam.");
       submitExam(uid,examId,questions);
     }
   },1000);
 }
 
+/* SUBMIT EXAM */
 async function submitExam(uid,examId,questions){
   clearInterval(timerInterval);
-  let score = 0;
 
+  let score = 0;
   questions.forEach((q,i)=>{
     const selected = document.querySelector(`input[name="q${i}"]:checked`);
-    if(selected && parseInt(selected.value) === q.answer) score++;
+    if(selected && parseInt(selected.value) === q.answer){
+      score++;
+    }
   });
 
-  await setDoc(doc(db,"students",uid),{
-    attempts:{[examId]:score}
-  },{merge:true});
+  const studentRef = doc(db,"students",uid);
+  await setDoc(studentRef,{
+    attempts:{ [examId]: score }
+  },{ merge:true });
 
-  alert(`Exam submitted!\nScore: ${score}/${questions.length}`);
+  alert(`Exam submitted! Your score: ${score}`);
   window.location.href="student-dashboard.html";
 }
 </script>
