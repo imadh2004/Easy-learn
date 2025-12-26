@@ -78,29 +78,6 @@
       padding: 12px;
     }
   }
-  /* Modal */
-  #leaveModal {
-    display: none;
-    position: fixed;
-    z-index: 999;
-    left: 0; top: 0;
-    width: 100%; height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    justify-content: center;
-    align-items: center;
-  }
-  #leaveModalContent {
-    background: #fff;
-    padding: 25px;
-    border-radius: 12px;
-    text-align: center;
-    width: 90%;
-    max-width: 400px;
-  }
-  #leaveModalContent button {
-    margin: 10px 5px 0 5px;
-    width: 120px;
-  }
 </style>
 </head>
 <body>
@@ -108,16 +85,6 @@
   <h2>Exam</h2>
   <div id="timer">Loading timer...</div>
   <div id="examContent">Loading exam...</div>
-</div>
-
-<!-- Modal for leaving -->
-<div id="leaveModal">
-  <div id="leaveModalContent">
-    <h3>Are you sure?</h3>
-    <p>Leaving now will auto-submit your exam.</p>
-    <button id="cancelLeaveBtn">Cancel</button>
-    <button id="confirmLeaveBtn">Leave & Submit</button>
-  </div>
 </div>
 
 <script type="module">
@@ -139,12 +106,9 @@ const db = getFirestore(app);
 let timerInterval;
 let examIdGlobal = null;
 let uidGlobal = null;
-let currentAnswers = {};
 
-// Modal elements
-const leaveModal = document.getElementById('leaveModal');
-const cancelLeaveBtn = document.getElementById('cancelLeaveBtn');
-const confirmLeaveBtn = document.getElementById('confirmLeaveBtn');
+// Track selected answers
+let currentAnswers = {};
 
 onAuthStateChanged(auth, async user => {
   if (!user) { window.location.href = "index.html"; return; }
@@ -189,17 +153,26 @@ async function loadExam(uid){
   submitBtn.onclick = ()=>submitExam(uidGlobal,examIdGlobal,examData.questions);
   container.appendChild(submitBtn);
 
+  // Track answers
   document.querySelectorAll('input[type="radio"]').forEach(input=>{
     input.addEventListener('change', e=>{
       const qName = e.target.name;
       currentAnswers[qName] = parseInt(e.target.value);
-      localStorage.setItem(`exam_answers_${examIdGlobal}`, JSON.stringify(currentAnswers));
     });
   });
 
   startTimer(examData.duration, uidGlobal, examIdGlobal, examData.questions);
 }
 
+// Auto-submit on reload/close
+window.addEventListener('beforeunload', async (e)=>{
+  e.preventDefault();
+  await submitExam(uidGlobal, examIdGlobal, Array.from(document.querySelectorAll('.question')).map((q, i)=>{
+    return { answer: currentAnswers[`q${i}`] ?? null };
+  }));
+});
+
+// Timer function
 function startTimer(durationMinutes, uid, examId, questions){
   const timerDiv = document.getElementById("timer");
   let time = durationMinutes * 60;
@@ -219,42 +192,15 @@ function startTimer(durationMinutes, uid, examId, questions){
 
 async function submitExam(uid, examId, questions){
   clearInterval(timerInterval);
-
-  const answers = JSON.parse(localStorage.getItem(`exam_answers_${examId}`)) || {};
+  const studentRef = doc(db,"students",uid);
   let score = 0;
   questions.forEach((q,i)=>{
-    const ans = answers[`q${i}`];
-    if(ans === q.answer) score++;
+    if(q.answer != null && q.answer === parseInt(document.querySelector(`input[name="q${i}"]:checked`)?.value)) score++;
   });
-
-  const studentRef = doc(db,"students",uid);
   await setDoc(studentRef,{attempts:{[examId]:score}},{merge:true});
   localStorage.removeItem(`exam_answers_${examId}`);
-  alert(`Exam submitted! Your score: ${score}`);
   window.location.href="student-dashboard.html";
 }
-
-// Custom leave modal
-window.addEventListener('beforeunload', (e) => {
-  e.preventDefault();
-  leaveModal.style.display = 'flex';
-  return "";
-});
-
-// Cancel leave
-cancelLeaveBtn.addEventListener('click', ()=>{
-  leaveModal.style.display = 'none';
-});
-
-// Confirm leave & submit
-confirmLeaveBtn.addEventListener('click', ()=>{
-  leaveModal.style.display = 'none';
-  const examSnap = document.getElementById("examContent").children;
-  submitExam(uidGlobal, examIdGlobal, Array.from(examSnap).filter(c=>c.className==='question').map(q=>{
-    const options = Array.from(q.querySelectorAll('input[type="radio"]'));
-    return { answer: options.findIndex(opt=>opt.checked) };
-  }));
-});
 </script>
 </body>
 </html>
