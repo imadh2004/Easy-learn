@@ -1,13 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <title>Leaderboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{font-family:Arial;background:#f4f6f8;padding:20px}
-table{width:100%;background:#fff;border-collapse:collapse}
-th,td{border:1px solid #ccc;padding:10px;text-align:center}
-th{background:#007bff;color:white}
-select{margin-bottom:10px;padding:6px}
+body {
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(135deg, #f4f6f8 0%, #e8eff5 100%);
+  margin: 0;
+  padding: 20px;
+}
+h2 {
+  text-align: center;
+  color: #007bff;
+  margin-bottom: 20px;
+}
+select {
+  display: block;
+  margin: 0 auto 20px auto;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  min-width: 200px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+th, td {
+  text-align: center;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+th {
+  background-color: #007bff;
+  color: #fff;
+  font-weight: 600;
+}
+tbody tr:hover {
+  background: #f1f9ff;
+  transform: translateX(5px);
+  transition: 0.2s;
+}
+.rank-1 {
+  background: linear-gradient(90deg, #FFD700, #FFC107);
+  color: #fff;
+  font-weight: bold;
+}
+.rank-2 {
+  background: linear-gradient(90deg, #C0C0C0, #A9A9A9);
+  color: #fff;
+  font-weight: bold;
+}
+.rank-3 {
+  background: linear-gradient(90deg, #cd7f32, #b87333);
+  color: #fff;
+  font-weight: bold;
+}
+.no-results {
+  text-align: center;
+  font-style: italic;
+  color: #555;
+}
+@media(max-width:768px){
+  table, th, td {
+    font-size: 14px;
+  }
+}
 </style>
 </head>
 <body>
@@ -17,15 +82,17 @@ select{margin-bottom:10px;padding:6px}
 <select id="examSelect"></select>
 
 <table>
-<thead>
-  <tr>
-    <th>Rank</th>
-    <th>Name</th>
-    <th>Score</th>
-    <th>Percentage</th>
-  </tr>
-</thead>
-<tbody id="rows"></tbody>
+  <thead>
+    <tr>
+      <th>Rank</th>
+      <th>Name</th>
+      <th>Score</th>
+      <th>Percentage</th>
+    </tr>
+  </thead>
+  <tbody id="rows">
+    <tr><td colspan="4" class="no-results">Loading...</td></tr>
+  </tbody>
 </table>
 
 <script type="module">
@@ -46,7 +113,6 @@ const firebaseConfig = {
   projectId:"science-cls",
   appId:"1:778012932104:web:f997ad31edac581f0b79bd"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -57,21 +123,17 @@ const rows = document.getElementById("rows");
 let examsCache = {};
 let unsubscribe = null;
 
-/* ---------------- LOAD EXAMS (ORDERED) ---------------- */
+/* ---------------- LOAD EXAMS ---------------- */
 async function loadExams(){
   examSelect.innerHTML = "";
   examsCache = {};
 
-  // ✅ ORDER BY createdAt (NEWEST FIRST)
-  const q = query(
-    collection(db,"exams"),
-    orderBy("createdAt","desc")
-  );
-
+  const q = query(collection(db,"exams"), orderBy("createdAt","desc"));
   const snap = await getDocs(q);
 
   if(snap.empty){
     examSelect.innerHTML = `<option>No exams</option>`;
+    rows.innerHTML = `<tr><td colspan="4" class="no-results">No exams available</td></tr>`;
     return;
   }
 
@@ -85,7 +147,6 @@ async function loadExams(){
     examSelect.appendChild(opt);
   });
 
-  // ✅ FIRST OPTION IS LATEST EXAM
   examSelect.selectedIndex = 0;
   loadLeaderboard();
 }
@@ -124,13 +185,18 @@ function loadLeaderboard(){
 
     rows.innerHTML = "";
     if(list.length === 0){
-      rows.innerHTML = `<tr><td colspan="4">No results</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="4" class="no-results">No results</td></tr>`;
       return;
     }
 
     list.forEach((s,i)=>{
+      let rankClass = '';
+      if(i===0) rankClass='rank-1';
+      else if(i===1) rankClass='rank-2';
+      else if(i===2) rankClass='rank-3';
+
       rows.innerHTML += `
-        <tr>
+        <tr class="${rankClass}">
           <td>${i+1}</td>
           <td>${s.name}</td>
           <td>${s.score}</td>
