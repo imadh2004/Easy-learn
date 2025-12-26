@@ -5,79 +5,60 @@
 <title>Exam</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  body {
-    font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #f4f6f8 0%, #e8eff5 100%);
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    min-height: 100vh;
-  }
-  .container {
-    width: 100%;
-    max-width: 800px;
-    margin: 20px;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    padding: 30px;
-    box-sizing: border-box;
-  }
-  h2 {
-    text-align: center;
-    color: #007bff;
-    margin-bottom: 20px;
-  }
-  #timer {
-    font-weight: bold;
-    font-size: 22px;
-    color: #ff4d4d;
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  .question {
-    background: #f9f9f9;
-    padding: 20px;
-    margin-bottom: 15px;
-    border-radius: 10px;
-    border-left: 5px solid #007bff;
-  }
-  .question b {
-    display: block;
-    margin-bottom: 10px;
-    font-size: 16px;
-  }
-  .options input[type="radio"] {
-    margin-right: 10px;
-  }
-  button {
-    background-color: #007bff;
-    color: #fff;
-    border: none;
-    padding: 12px 25px;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: 0.3s;
-    display: block;
-    margin: 20px auto 0 auto;
-  }
-  button:hover {
-    background-color: #0056b3;
-  }
-  @media (max-width: 600px) {
-    .container {
-      padding: 20px;
-    }
-    .question {
-      padding: 15px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-    }
-  }
+body {
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(135deg, #f4f6f8 0%, #e8eff5 100%);
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
+.container {
+  width: 100%;
+  max-width: 800px;
+  margin: 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+  padding: 30px;
+  box-sizing: border-box;
+}
+h2 { text-align: center; color: #007bff; margin-bottom: 20px; }
+#timer {
+  font-weight: bold;
+  font-size: 22px;
+  color: #ff4d4d;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.question {
+  background: #f9f9f9;
+  padding: 20px;
+  margin-bottom: 15px;
+  border-radius: 10px;
+  border-left: 5px solid #007bff;
+}
+.question b { display: block; margin-bottom: 10px; font-size: 16px; }
+.options input[type="radio"] { margin-right: 10px; }
+button {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
+  display: block;
+  margin: 20px auto 0 auto;
+}
+button:hover { background-color: #0056b3; }
+@media (max-width: 600px) {
+  .container { padding: 20px; }
+  .question { padding: 15px; }
+  button { width: 100%; padding: 12px; }
+}
 </style>
 </head>
 <body>
@@ -106,12 +87,18 @@ const db = getFirestore(app);
 let timerInterval;
 let examIdGlobal = null;
 let uidGlobal = null;
-
-// Track selected answers
+let examDataGlobal = null;
 let currentAnswers = {};
 
+// Save answers to localStorage periodically
+function saveLocalAnswers() {
+  if(examIdGlobal && Object.keys(currentAnswers).length > 0){
+    localStorage.setItem(`exam_answers_${examIdGlobal}`, JSON.stringify(currentAnswers));
+  }
+}
+
 onAuthStateChanged(auth, async user => {
-  if (!user) { window.location.href = "index.html"; return; }
+  if(!user){ window.location.href="index.html"; return; }
   uidGlobal = user.uid;
 
   const studentRef = doc(db,"students",uidGlobal);
@@ -135,22 +122,22 @@ async function loadExam(uid){
 
   const examSnap = await getDoc(doc(db,"exams",examId));
   if(!examSnap.exists()){ window.location.href="student-dashboard.html"; return; }
-  const examData = examSnap.data();
+  examDataGlobal = examSnap.data();
 
   const container = document.getElementById("examContent");
-  container.innerHTML = `<h3 style="text-align:center;color:#007bff;">${examData.title}</h3>`;
+  container.innerHTML = `<h3 style="text-align:center;color:#007bff;">${examDataGlobal.title}</h3>`;
 
-  examData.questions.forEach((q,i)=>{
+  examDataGlobal.questions.forEach((q,i)=>{
     const div = document.createElement("div");
     div.className="question";
-    div.innerHTML=`<b>Q${i+1}: ${q.q}</b>` +
+    div.innerHTML = `<b>Q${i+1}: ${q.q}</b>` +
       q.options.map((opt,j)=>`<div class="options"><input type="radio" name="q${i}" value="${j}"> ${opt}</div>`).join("");
     container.appendChild(div);
   });
 
   const submitBtn = document.createElement("button");
   submitBtn.textContent="Submit Exam";
-  submitBtn.onclick = ()=>submitExam(uidGlobal,examIdGlobal,examData.questions);
+  submitBtn.onclick = ()=>submitExam(uidGlobal,examIdGlobal,examDataGlobal.questions);
   container.appendChild(submitBtn);
 
   // Track answers
@@ -158,21 +145,36 @@ async function loadExam(uid){
     input.addEventListener('change', e=>{
       const qName = e.target.name;
       currentAnswers[qName] = parseInt(e.target.value);
+      saveLocalAnswers();
     });
   });
 
-  startTimer(examData.duration, uidGlobal, examIdGlobal, examData.questions);
+  startTimer(examDataGlobal.duration, uidGlobal, examIdGlobal, examDataGlobal.questions);
 }
 
-// Auto-submit on reload/close
-window.addEventListener('beforeunload', async (e)=>{
-  e.preventDefault();
-  await submitExam(uidGlobal, examIdGlobal, Array.from(document.querySelectorAll('.question')).map((q, i)=>{
-    return { answer: currentAnswers[`q${i}`] ?? null };
-  }));
+// Auto-submit on leave/reload
+window.addEventListener('beforeunload', (e)=>{
+  autoSubmit();
 });
 
-// Timer function
+// Auto-submit function
+async function autoSubmit(){
+  if(!uidGlobal || !examIdGlobal) return;
+
+  // Read from localStorage if needed
+  const savedAnswers = JSON.parse(localStorage.getItem(`exam_answers_${examIdGlobal}`) || '{}');
+  let score = 0;
+  examDataGlobal.questions.forEach((q,i)=>{
+    const ans = savedAnswers[`q${i}`];
+    if(ans === q.answer) score++;
+  });
+
+  const studentRef = doc(db,"students",uidGlobal);
+  await setDoc(studentRef,{attempts:{[examIdGlobal]:score}},{merge:true});
+  localStorage.removeItem(`exam_answers_${examIdGlobal}`);
+}
+
+// Timer
 function startTimer(durationMinutes, uid, examId, questions){
   const timerDiv = document.getElementById("timer");
   let time = durationMinutes * 60;
@@ -192,12 +194,16 @@ function startTimer(durationMinutes, uid, examId, questions){
 
 async function submitExam(uid, examId, questions){
   clearInterval(timerInterval);
-  const studentRef = doc(db,"students",uid);
+
   let score = 0;
   questions.forEach((q,i)=>{
-    if(q.answer != null && q.answer === parseInt(document.querySelector(`input[name="q${i}"]:checked`)?.value)) score++;
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    if(selected && parseInt(selected.value)===q.answer) score++;
   });
+
+  const studentRef = doc(db,"students",uid);
   await setDoc(studentRef,{attempts:{[examId]:score}},{merge:true});
+
   localStorage.removeItem(`exam_answers_${examId}`);
   window.location.href="student-dashboard.html";
 }
