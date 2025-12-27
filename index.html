@@ -2,276 +2,257 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Easy Learn | Online Science Exams</title>
+<title>Easy Learn</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+* { box-sizing: border-box; margin:0; padding:0; }
 
-body{
-  font-family:Arial,sans-serif;
-  background:linear-gradient(135deg,#6b73ff,#000dff);
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #6b73ff, #000dff);
   min-height:100vh;
   display:flex;
   justify-content:center;
   align-items:center;
   color:#fff;
-  overflow:hidden;
 }
 
-/* Fade animation */
-.fade{
-  animation:fadeIn .6s ease;
-}
-@keyframes fadeIn{
-  from{opacity:0;transform:translateY(15px)}
-  to{opacity:1;transform:translateY(0)}
+.container {
+  width: 95%;
+  max-width: 900px;
+  text-align: center;
 }
 
-/* Container */
-.container{
-  width:95%;
-  max-width:900px;
-  text-align:center;
+/* Heading */
+h1 {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
+  letter-spacing: 1.5px;
+  transform: translateY(-6px); /* raised text */
+  text-shadow: 0 6px 15px rgba(0,0,0,0.35);
 }
 
-/* Branding */
-.brand{
-  font-size:.9rem;
-  letter-spacing:2px;
-  color:#ffd700;
-  margin-bottom:8px;
-  font-weight:bold;
-}
-
-h1{
-  font-size:2.4rem;
-  margin-bottom:10px;
-}
-
-.subtitle{
-  opacity:.9;
-  margin-bottom:35px;
-  font-size:1.05rem;
+.subtitle {
+  margin-bottom: 35px;
+  opacity: 0.9;
+  font-size: 1rem;
 }
 
 /* Cards */
-.cards{
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:center;
-  gap:25px;
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 25px;
 }
 
-.card{
-  background:white;
-  color:#000;
-  width:230px;
-  padding:32px 22px;
-  border-radius:18px;
-  cursor:pointer;
-  box-shadow:0 10px 25px rgba(0,0,0,.35);
-  transition:.35s;
-  position:relative;
+.card {
+  background: white;
+  color: #000;
+  width: 220px;
+  padding: 30px 20px;
+  border-radius: 15px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
 }
 
-.card:hover{
-  transform:translateY(-8px) scale(1.06);
-  box-shadow:0 18px 35px rgba(0,0,0,.45);
+.card:hover {
+  transform: translateY(-6px) scale(1.05);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.4);
 }
 
-/* Gold top border */
-.card::before{
-  content:"";
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:6px;
-  background:linear-gradient(90deg,#ffd700,#ffae00);
-  border-radius:18px 18px 0 0;
+.card h2 {
+  margin-top: 10px;
+  font-size: 1.4rem;
 }
 
-.card h2{
-  margin-top:12px;
-  font-size:1.45rem;
-}
-
-.card p{
-  margin-top:10px;
-  font-size:.95rem;
-  color:#555;
+.card p {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  color: #555;
 }
 
 /* Arrow */
-.card::after{
-  content:"➔";
-  position:absolute;
-  right:16px;
-  top:50%;
-  transform:translateY(-50%);
-  font-size:1.6rem;
-  color:#ffd700;
-  transition:.3s;
-}
-.card:hover::after{
-  transform:translateY(-50%) translateX(6px);
+.card::after {
+  content: "➔";
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  color: #6b73ff;
+  transition: transform 0.3s;
 }
 
-/* Login box */
-.login-box{
-  background:white;
-  color:#000;
-  padding:30px 26px;
-  border-radius:18px;
-  box-shadow:0 10px 25px rgba(0,0,0,.35);
-  width:95%;
-  max-width:420px;
-  margin:auto;
-  display:none;
+.card:hover::after {
+  transform: translateY(-50%) translateX(6px);
 }
 
-.login-box h2{
-  margin-bottom:18px;
+/* Login Boxes */
+.login-box {
+  background: white;
+  color: #000;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+  width: 90%;
+  max-width: 400px;
+  margin: auto;
+  display: none;
 }
 
-.login-box input{
+.login-box h2 {
+  margin-bottom: 15px;
+  color: #000dff;
+}
+
+.login-box input {
   width:100%;
-  padding:12px;
-  margin:10px 0;
+  padding:10px;
+  margin:8px 0;
   border-radius:8px;
   border:1px solid #ccc;
-  font-size:1rem;
 }
 
-.login-box button{
+.login-box button {
   width:100%;
-  padding:12px;
+  padding:10px;
+  margin-top:10px;
   border:none;
   border-radius:8px;
-  font-size:1rem;
-  cursor:pointer;
-  transition:.3s;
-}
-
-/* Buttons */
-.login-btn{
-  background:linear-gradient(90deg,#ffd700,#ffae00);
-  color:#000;
+  background:#6b73ff;
+  color:#fff;
   font-weight:bold;
+  cursor:pointer;
+  transition: background 0.3s;
 }
-.login-btn:hover{opacity:.9}
 
-.back-btn{
-  background:#eee;
-  margin-top:12px;
+.login-box button:hover {
+  background:#000dff;
 }
-.back-btn:hover{background:#ccc}
+
+.back-btn {
+  background:#ccc !important;
+  color:#000 !important;
+}
+
+.back-btn:hover {
+  background:#aaa !important;
+}
 
 /* Responsive */
-@media(max-width:600px){
-  h1{font-size:1.9rem}
-  .cards{flex-direction:column}
-  .card{width:85%;margin:auto}
+@media (max-width: 600px) {
+  h1 { font-size: 1.9rem; }
+  .cards { flex-direction: column; }
+  .card { width: 85%; margin: auto; }
 }
 </style>
 </head>
+
 <body>
 
-<!-- Landing -->
-<div class="container fade" id="landing">
-  <div class="brand">GRADE 10 SCIENCE • ONLINE</div>
+<!-- LANDING -->
+<div class="container" id="landing">
   <h1>Welcome to Easy Learn</h1>
-  <p class="subtitle">Smart exams • Instant results • Live rankings</p>
+  <div class="subtitle">Choose how you want to continue</div>
 
   <div class="cards">
     <div class="card" id="studentBtn">
       🎓
       <h2>Student</h2>
-      <p>Attempt exams & track progress</p>
+      <p>Login to attend exams</p>
     </div>
 
     <div class="card" id="teacherBtn">
       👨‍🏫
       <h2>Teacher</h2>
-      <p>Create exams & manage students</p>
+      <p>Manage exams & students</p>
     </div>
   </div>
 </div>
 
-<!-- Student Login -->
-<div class="login-box fade" id="student-login">
+<!-- STUDENT LOGIN -->
+<div class="login-box" id="student-login">
   <h2>Student Login</h2>
   <input type="text" id="studentIndex" placeholder="Index Number">
   <input type="password" id="studentPassword" placeholder="Password">
-  <button class="login-btn" id="studentLoginBtn">Login</button>
-  <button class="back-btn" id="studentBackBtn">← Back</button>
+  <button id="studentLoginBtn">Login</button>
+  <button class="back-btn" id="studentBackBtn">Back</button>
 </div>
 
-<!-- Teacher Login -->
-<div class="login-box fade" id="teacher-login">
+<!-- TEACHER LOGIN -->
+<div class="login-box" id="teacher-login">
   <h2>Teacher Login</h2>
   <input type="email" id="teacherEmail" placeholder="Email">
   <input type="password" id="teacherPassword" placeholder="Password">
-  <button class="login-btn" id="teacherLoginBtn">Login</button>
-  <button class="back-btn" id="teacherBackBtn">← Back</button>
+  <button id="teacherLoginBtn">Login</button>
+  <button class="back-btn" id="teacherBackBtn">Back</button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-const firebaseConfig={
-  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain:"science-cls.firebaseapp.com",
-  projectId:"science-cls",
-  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
+const firebaseConfig = {
+  apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
+  authDomain: "science-cls.firebaseapp.com",
+  projectId: "science-cls",
+  appId: "1:778012932104:web:f997ad31edac581f0b79bd"
 };
 
-const app=initializeApp(firebaseConfig);
-const auth=getAuth(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-const landing=document.getElementById("landing");
-const studentBox=document.getElementById("student-login");
-const teacherBox=document.getElementById("teacher-login");
+const landing = document.getElementById("landing");
+const studentBox = document.getElementById("student-login");
+const teacherBox = document.getElementById("teacher-login");
 
-studentBtn.onclick=()=>{
-  landing.style.display="none";
-  studentBox.style.display="block";
+studentBtn.onclick = () => {
+  landing.style.display = "none";
+  studentBox.style.display = "block";
 };
 
-teacherBtn.onclick=()=>{
-  landing.style.display="none";
-  teacherBox.style.display="block";
+teacherBtn.onclick = () => {
+  landing.style.display = "none";
+  teacherBox.style.display = "block";
 };
 
-studentBackBtn.onclick=()=>{
-  studentBox.style.display="none";
-  landing.style.display="block";
+studentBackBtn.onclick = () => {
+  studentBox.style.display = "none";
+  landing.style.display = "block";
 };
 
-teacherBackBtn.onclick=()=>{
-  teacherBox.style.display="none";
-  landing.style.display="block";
+teacherBackBtn.onclick = () => {
+  teacherBox.style.display = "none";
+  landing.style.display = "block";
 };
 
-studentLoginBtn.onclick=()=>{
-  let index=studentIndex.value.trim();
-  const password=studentPassword.value;
-  if(!index||!password){alert("Enter index & password");return;}
-  index=index.replace(/\s+/g,"");
-  signInWithEmailAndPassword(auth,`easylearn${index}@example.com`,password)
+/* Student Login */
+studentLoginBtn.onclick = () => {
+  let index = studentIndex.value.trim();
+  const password = studentPassword.value;
+  if(!index || !password) return alert("Enter index and password");
+
+  index = index.replace(/\s+/g,'');
+  const email = `easylearn${index}@example.com`;
+
+  signInWithEmailAndPassword(auth,email,password)
     .then(()=>location.href="student-dashboard.html")
-    .catch(e=>alert(e.message));
+    .catch(err=>alert(err.message));
 };
 
-teacherLoginBtn.onclick=()=>{
-  const email=teacherEmail.value;
-  const password=teacherPassword.value;
-  if(!email||!password){alert("Enter email & password");return;}
+/* Teacher Login */
+teacherLoginBtn.onclick = () => {
+  const email = teacherEmail.value;
+  const password = teacherPassword.value;
+  if(!email || !password) return alert("Enter email and password");
+
   signInWithEmailAndPassword(auth,email,password)
     .then(()=>location.href="teacher-dashboard.html")
-    .catch(e=>alert(e.message));
+    .catch(err=>alert(err.message));
 };
 </script>
 
