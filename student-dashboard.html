@@ -2,94 +2,87 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Student Dashboard | Easy Learn</title>
+<title>Student Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f6f9;
-  color: #333;
-  padding: 20px;
-}
-.header {
-  max-width: 900px;
-  margin: 0 auto 20px auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-}
-.header h2 { color: #6b73ff; font-size: 1.5rem; }
-.nav-btns { display: flex; gap: 10px; }
-button {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  background: #6b73ff;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-button:hover { background: #000dff; }
-.logout-btn { background: #dc3545; }
-.logout-btn:hover { background: #bd2130; }
-
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-}
-.card {
-  background: #fff;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-  margin-bottom: 20px;
-}
-.card h3 { margin-bottom: 15px; color: #333; }
-
-.exam-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  border-left: 5px solid #6b73ff;
-}
-.exam-item h4 { font-size: 1.1rem; margin-bottom: 4px; }
-.exam-item p { font-size: 0.85rem; color: #666; }
-.btn-start { background: #28a745; }
-.btn-start:hover { background: #218838; }
-.btn-disabled { background: #6c757d; cursor: not-allowed; }
-.btn-disabled:hover { background: #6c757d; }
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f6f9;
+    color: #333;
+    padding: 20px;
+    margin: 0;
+  }
+  .header {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .header h2 {
+    margin: 0;
+    color: #007bff;
+  }
+  .btn {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 5px;
+  }
+  .btn:hover {
+    background-color: #0056b3;
+  }
+  .btn-logout {
+    background-color: #dc3545;
+  }
+  .btn-logout:hover {
+    background-color: #c82333;
+  }
+  .exam-card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .exam-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+  }
+  .exam-info {
+    font-size: 14px;
+    color: #666;
+    margin-top: 5px;
+  }
 </style>
 </head>
 <body>
 
 <div class="header">
   <div>
-    <h2 id="welcomeText">Welcome Student</h2>
-    <p id="studentIndexText" style="color: #666; font-size: 0.9rem;"></p>
+    <h2 id="studentWelcome">Welcome, Student</h2>
+    <div id="studentIndexDisplay" style="color:#666; margin-top:4px;"></div>
   </div>
-  <div class="nav-btns">
-    <button onclick="location.href='my-results.html'">📊 My Results</button>
-    <button onclick="location.href='leaderboard.html'">🏆 Leaderboard</button>
-    <button class="logout-btn" id="logoutBtn">Logout</button>
+  <div>
+    <button class="btn" onclick="goToMyResults()">My Results</button>
+    <button class="btn" onclick="goToLeaderboard()">Leaderboard</button>
+    <button class="btn btn-logout" id="logoutBtn">Logout</button>
   </div>
 </div>
 
-<div class="container">
-  <div class="card">
-    <h3>Available Active Exams</h3>
-    <div id="examsList">Loading active exams...</div>
-  </div>
-</div>
+<h3>Active Exams</h3>
+<div id="activeExamsList">Loading active exams...</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
@@ -110,20 +103,18 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentUser = null;
-let studentData = null;
+let currentStudent = null;
 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    currentUser = user;
     const stuDoc = await getDoc(doc(db, "students", user.uid));
     if (stuDoc.exists()) {
-      studentData = stuDoc.data();
-      document.getElementById("welcomeText").textContent = `Welcome, ${studentData.name}`;
-      document.getElementById("studentIndexText").textContent = `Index: ${studentData.index}`;
+      currentStudent = stuDoc.data();
+      document.getElementById("studentWelcome").textContent = `Welcome, ${currentStudent.name}`;
+      document.getElementById("studentIndexDisplay").textContent = `Index: ${currentStudent.index}`;
       loadActiveExams();
     } else {
-      alert("Student profile not found.");
+      alert("Student record not found.");
       signOut(auth);
     }
   } else {
@@ -132,47 +123,47 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function loadActiveExams() {
-  const container = document.getElementById("examsList");
+  const container = document.getElementById("activeExamsList");
   container.innerHTML = "";
 
   const snap = await getDocs(collection(db, "exams"));
   const activeExams = [];
-  
-  snap.forEach(docSnap => {
-    const data = docSnap.data();
+
+  snap.forEach((d) => {
+    const data = d.data();
     if (data.active) {
-      activeExams.push({ id: docSnap.id, ...data });
+      activeExams.push({ id: d.id, ...data });
     }
   });
 
   if (activeExams.length === 0) {
-    container.innerHTML = "<p style='color: #777;'>No active exams currently available.</p>";
+    container.innerHTML = "<p>No active exams available at the moment.</p>";
     return;
   }
 
-  const attempts = studentData.attempts || {};
+  const attempts = currentStudent.attempts || {};
 
-  activeExams.forEach(exam => {
+  activeExams.forEach((exam) => {
+    const card = document.createElement("div");
+    card.className = "exam-card";
+
     const hasAttempted = attempts[exam.id] !== undefined;
-    
-    const div = document.createElement("div");
-    div.className = "exam-item";
-    
-    div.innerHTML = `
+
+    card.innerHTML = `
       <div>
-        <h4>${exam.title}</h4>
-        <p>⏱ Duration: ${exam.duration} Minutes | ❓ Questions: ${exam.questions ? exam.questions.length : 0}</p>
+        <div class="exam-title">${exam.title}</div>
+        <div class="exam-info">Duration: ${exam.duration} mins | Questions: ${exam.questions ? exam.questions.length : 0}</div>
       </div>
       <div>
         ${
-          hasAttempted 
-          ? `<button class="btn-disabled" disabled>Completed</button>`
-          : `<button class="btn-start" onclick="startExam('${exam.id}')">Start Exam</button>`
+          hasAttempted
+            ? `<button class="btn" style="background-color:#6c757d; cursor:not-allowed;" disabled>Attempted</button>`
+            : `<button class="btn" onclick="startExam('${exam.id}')">Start Exam</button>`
         }
       </div>
     `;
-    
-    container.appendChild(div);
+
+    container.appendChild(card);
   });
 }
 
@@ -181,8 +172,18 @@ window.startExam = (examId) => {
   location.href = "student-exams.html";
 };
 
+window.goToMyResults = () => {
+  location.href = "my-results.html";
+};
+
+window.goToLeaderboard = () => {
+  location.href = "leaderboard.html";
+};
+
 document.getElementById("logoutBtn").onclick = () => {
-  signOut(auth).then(() => location.href = "index.html");
+  signOut(auth).then(() => {
+    location.href = "index.html";
+  });
 };
 </script>
 </body>
