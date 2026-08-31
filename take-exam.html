@@ -127,7 +127,6 @@ onAuthStateChanged(auth, async (user) => {
     if (stuDoc.exists()) {
       currentStudent = { uid: user.uid, ...stuDoc.data() };
       
-      // Prevent retaking completed exams
       if (currentStudent.attempts && currentStudent.attempts[examId] !== undefined) {
         alert("You have already completed this exam.");
         location.href = "student-exams.html";
@@ -219,12 +218,19 @@ async function submitExam() {
 
   questions.forEach((q, index) => {
     const selected = document.querySelector(`input[name="q_${index}"]:checked`);
-    if (selected && parseInt(selected.value) === parseInt(q.correctIndex)) {
-      score++;
+    if (selected) {
+      const selectedValue = Number(selected.value);
+      
+      // Supports 0-based index (0, 1, 2, 3) and 1-based index (1, 2, 3, 4) schema types
+      let correctVal = q.correctIndex !== undefined ? Number(q.correctIndex) : Number(q.correct);
+      
+      if (selectedValue === correctVal) {
+        score++;
+      }
     }
   });
 
-  const percentage = Math.round((score / questions.length) * 100);
+  const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
 
   try {
     const studentRef = doc(db, "students", currentStudent.uid);
