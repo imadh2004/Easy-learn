@@ -5,80 +5,96 @@
 <title>My Results | Easy Learn</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: Arial, sans-serif;
     background: linear-gradient(135deg, #6b73ff, #000dff);
     min-height: 100vh;
+    padding: 30px 20px;
     color: #fff;
-    margin: 0;
-    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
-
   .container {
-    max-width: 900px;
-    margin: auto;
-    background: #fff;
-    color: #000;
-    border-radius: 15px;
-    padding: 30px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    width: 95%;
+    max-width: 800px;
   }
-
-  h1, h2 {
-    text-align: center;
-    color: #007bff;
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
   }
-
-  h2 {
-    margin-bottom: 20px;
+  .header h1 {
+    font-size: 2rem;
   }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 25px;
-  }
-
-  th, td {
-    padding: 12px;
-    border: 1px solid #ccc;
-    text-align: center;
-  }
-
-  th {
-    background-color: #007bff;
+  .btn-back {
+    padding: 10px 18px;
+    background: rgba(255, 255, 255, 0.2);
     color: white;
-  }
-
-  tr.gold {
-    background-color: gold;
-    font-weight: bold;
-  }
-
-  canvas {
-    margin-top: 20px;
-  }
-
-  .backBtn {
-    display: block;
-    margin: 20px auto 0;
-    padding: 10px 25px;
-    font-size: 1rem;
+    border: 1px solid white;
     border-radius: 8px;
-    border: none;
-    background: #007bff;
-    color: white;
     cursor: pointer;
-    transition: 0.3s;
+    font-size: 0.95rem;
+    font-weight: bold;
+    backdrop-filter: blur(5px);
+    transition: background 0.3s;
   }
-
-  .backBtn:hover {
-    background: #0056b3;
+  .btn-back:hover {
+    background: rgba(255, 255, 255, 0.4);
   }
-
-  @media(max-width:600px){
-    table, th, td {
-      font-size: 14px;
+  .results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .result-card {
+    background: white;
+    color: #333;
+    padding: 20px 25px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .result-info h3 {
+    font-size: 1.3rem;
+    color: #000dff;
+    margin-bottom: 6px;
+  }
+  .result-info p {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 4px;
+  }
+  .score-badge {
+    text-align: right;
+  }
+  .score-percentage {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #28a745;
+  }
+  .score-fraction {
+    font-size: 0.9rem;
+    color: #555;
+  }
+  .loading-text {
+    text-align: center;
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-top: 40px;
+  }
+  @media (max-width: 600px) {
+    .result-card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 15px;
+    }
+    .score-badge {
+      text-align: left;
     }
   }
 </style>
@@ -86,146 +102,97 @@
 <body>
 
 <div class="container">
-  <h1>My Results</h1>
-  <h2 id="studentName">Loading...</h2>
+  <div class="header">
+    <h1>My Results</h1>
+    <button class="btn-back" onclick="goToDashboard()">⬅ Dashboard</button>
+  </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Exam</th>
-        <th>Score</th>
-        <th>Percentage</th>
-        <th>Rank</th>
-      </tr>
-    </thead>
-    <tbody id="resultsBody">
-      <tr><td colspan="4">Loading...</td></tr>
-    </tbody>
-  </table>
-
-  <canvas id="resultsChart" height="200"></canvas>
-  <button class="backBtn" id="backBtn">⬅ Back</button>
+  <div id="resultsContainer" class="results-list">
+    <div class="loading-text">Loading your exam results...</div>
+  </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
-// Firebase config
 const firebaseConfig = {
-  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain:"science-cls.firebaseapp.com",
-  projectId:"science-cls",
-  storageBucket:"science-cls.appspot.com",
-  messagingSenderId:"778012932104",
-  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
+  apiKey: "AIzaSyAiC22wBDyBitvwXPfgABS4vu0uNMgmZ5c",
+  authDomain: "new-science-5fb45.firebaseapp.com",
+  projectId: "new-science-5fb45",
+  storageBucket: "new-science-5fb45.firebasestorage.app",
+  messagingSenderId: "76803175944",
+  appId: "1:76803175944:web:565258c4210a1ac85003bd",
+  measurementId: "G-9B5QKQF9DY"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const resultsBody = document.getElementById("resultsBody");
-const chartCanvas = document.getElementById("resultsChart");
-const studentNameElem = document.getElementById("studentName");
-const backBtn = document.getElementById("backBtn");
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    const stuDoc = await getDoc(doc(db, "students", user.uid));
+    if (stuDoc.exists()) {
+      const studentData = stuDoc.data();
+      loadResults(studentData.attempts || {});
+    } else {
+      alert("Student profile not found.");
+      location.href = "index.html";
+    }
+  } else {
+    location.href = "index.html";
+  }
+});
 
-let myChart = null;
+async function loadResults(attempts) {
+  const container = document.getElementById("resultsContainer");
+  container.innerHTML = "";
 
-// Check student login
-onAuthStateChanged(auth, async user => {
-  if(!user) {
-    window.location.href = "index.html";
+  const attemptExamIds = Object.keys(attempts);
+
+  if (attemptExamIds.length === 0) {
+    container.innerHTML = "<div class='loading-text'>You have not completed any exams yet.</div>";
     return;
   }
 
-  const uid = user.uid;
-  const studentSnap = await getDoc(doc(db,"students",uid));
-  const studentData = studentSnap.data();
-  const attempts = studentData.attempts || {};
-
-  // Show student name
-  studentNameElem.textContent = studentData.name;
-
-  // Load all exams
-  const examsSnap = await getDocs(collection(db,"exams"));
-  const examsData = [];
-  examsSnap.forEach(docSnap=>{
-    const data = docSnap.data();
-    examsData.push({id: docSnap.id, ...data});
+  const examsSnap = await getDocs(collection(db, "exams"));
+  const examMap = {};
+  examsSnap.forEach((docSnap) => {
+    examMap[docSnap.id] = docSnap.data();
   });
 
-  // Build results array
-  const results = [];
-  for(const exam of examsData) {
-    if(attempts[exam.id] !== undefined) {
-      const score = attempts[exam.id];
-      const total = exam.questions.length;
-      const percentage = ((score/total)*100).toFixed(2);
-      results.push({title: exam.title, score, total, percentage, createdAt: exam.createdAt});
-    }
-  }
+  attemptExamIds.forEach((examId) => {
+    const attempt = attempts[examId];
+    const examInfo = examMap[examId] || { title: "Deleted Exam" };
 
-  // Sort by createdAt
-  results.sort((a,b)=>a.createdAt - b.createdAt);
+    const card = document.createElement("div");
+    card.className = "result-card";
 
-  // Calculate ranks (based on score descending)
-  const sortedByScore = [...results].sort((a,b)=>b.score - a.score);
-  const ranks = {};
-  sortedByScore.forEach((r,i)=>{
-    ranks[r.title] = i+1;
+    const formattedDate = attempt.submittedAt 
+      ? new Date(attempt.submittedAt).toLocaleDateString() + " " + new Date(attempt.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : "Completed";
+
+    card.innerHTML = `
+      <div class="result-info">
+        <h3>${examInfo.title}</h3>
+        <p>📅 Submitted: ${formattedDate}</p>
+      </div>
+      <div class="score-badge">
+        <div class="score-percentage">${attempt.percentage}%</div>
+        <div class="score-fraction">${attempt.score} / ${attempt.totalQuestions} Marks</div>
+      </div>
+    `;
+
+    container.appendChild(card);
   });
+}
 
-  // Populate table
-  resultsBody.innerHTML = "";
-  if(results.length === 0){
-    resultsBody.innerHTML = `<tr><td colspan="4">No results yet</td></tr>`;
-  } else {
-    results.forEach(r=>{
-      const tr = document.createElement("tr");
-      if(ranks[r.title] === 1) tr.classList.add("gold");
-      tr.innerHTML = `
-        <td>${r.title}</td>
-        <td>${r.score}/${r.total}</td>
-        <td>${r.percentage}%</td>
-        <td>${ranks[r.title]}</td>
-      `;
-      resultsBody.appendChild(tr);
-    });
-  }
-
-  // Chart
-  const labels = results.map(r=>r.title);
-  const data = results.map(r=>r.percentage);
-  if(myChart) myChart.destroy();
-  myChart = new Chart(chartCanvas,{
-    type: "line",
-    data:{
-      labels,
-      datasets:[{
-        label:"Percentage",
-        data,
-        borderColor:"#007bff",
-        backgroundColor:"rgba(0,123,255,0.2)",
-        tension:0.3,
-        fill:true,
-        pointRadius:5
-      }]
-    },
-    options:{
-      scales:{y:{min:0,max:100}},
-      responsive:true,
-      plugins:{legend:{display:false}}
-    }
-  });
-});
-
-// Back button
-backBtn.addEventListener("click", () => {
-  window.location.href = "student-dashboard.html";
-});
+window.goToDashboard = () => {
+  location.href = "student-dashboard.html";
+};
 </script>
+
 </body>
 </html>
