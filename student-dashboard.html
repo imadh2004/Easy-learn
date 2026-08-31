@@ -45,25 +45,32 @@
   .btn-logout:hover {
     background-color: #c82333;
   }
-  .exam-card {
+  .section {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+  }
+  .exam-card {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
   .exam-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     color: #333;
   }
   .exam-info {
-    font-size: 14px;
+    font-size: 13px;
     color: #666;
-    margin-top: 5px;
+    margin-top: 4px;
   }
 </style>
 </head>
@@ -75,14 +82,16 @@
     <div id="studentIndexDisplay" style="color:#666; margin-top:4px;"></div>
   </div>
   <div>
-    <button class="btn" onclick="goToMyResults()">My Results</button>
-    <button class="btn" onclick="goToLeaderboard()">Leaderboard</button>
+    <button class="btn" id="myResultsBtn">My Results</button>
+    <button class="btn" id="leaderboardBtn">Leaderboard</button>
     <button class="btn btn-logout" id="logoutBtn">Logout</button>
   </div>
 </div>
 
-<h3>Active Exams</h3>
-<div id="activeExamsList">Loading active exams...</div>
+<div class="section">
+  <h3>Exams</h3>
+  <div id="examsList">Loading exams...</div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
@@ -112,9 +121,9 @@ onAuthStateChanged(auth, async (user) => {
       currentStudent = stuDoc.data();
       document.getElementById("studentWelcome").textContent = `Welcome, ${currentStudent.name}`;
       document.getElementById("studentIndexDisplay").textContent = `Index: ${currentStudent.index}`;
-      loadActiveExams();
+      loadExams();
     } else {
-      alert("Student record not found.");
+      alert("Student profile not found.");
       signOut(auth);
     }
   } else {
@@ -122,32 +131,40 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-async function loadActiveExams() {
-  const container = document.getElementById("activeExamsList");
+async function loadExams() {
+  const container = document.getElementById("examsList");
   container.innerHTML = "";
 
   const snap = await getDocs(collection(db, "exams"));
-  const activeExams = [];
+  const exams = [];
 
   snap.forEach((d) => {
-    const data = d.data();
-    if (data.active) {
-      activeExams.push({ id: d.id, ...data });
-    }
+    exams.push({ id: d.id, ...d.data() });
   });
 
-  if (activeExams.length === 0) {
-    container.innerHTML = "<p>No active exams available at the moment.</p>";
+  exams.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+  if (exams.length === 0) {
+    container.innerHTML = "<p style='color:#777;'>No exams available.</p>";
     return;
   }
 
   const attempts = currentStudent.attempts || {};
 
-  activeExams.forEach((exam) => {
+  exams.forEach((exam) => {
     const card = document.createElement("div");
     card.className = "exam-card";
 
     const hasAttempted = attempts[exam.id] !== undefined;
+
+    let actionButton = "";
+    if (hasAttempted) {
+      actionButton = `<button class="btn" style="background-color:#6c757d; cursor:not-allowed;" disabled>Attempted</button>`;
+    } else if (exam.active) {
+      actionButton = `<button class="btn" onclick="startExam('${exam.id}')">Start Exam</button>`;
+    } else {
+      actionButton = `<button class="btn" style="background-color:#dc3545; cursor:not-allowed;" disabled>Inactive</button>`;
+    }
 
     card.innerHTML = `
       <div>
@@ -155,11 +172,7 @@ async function loadActiveExams() {
         <div class="exam-info">Duration: ${exam.duration} mins | Questions: ${exam.questions ? exam.questions.length : 0}</div>
       </div>
       <div>
-        ${
-          hasAttempted
-            ? `<button class="btn" style="background-color:#6c757d; cursor:not-allowed;" disabled>Attempted</button>`
-            : `<button class="btn" onclick="startExam('${exam.id}')">Start Exam</button>`
-        }
+        ${actionButton}
       </div>
     `;
 
@@ -172,11 +185,11 @@ window.startExam = (examId) => {
   location.href = "student-exams.html";
 };
 
-window.goToMyResults = () => {
+document.getElementById("myResultsBtn").onclick = () => {
   location.href = "my-results.html";
 };
 
-window.goToLeaderboard = () => {
+document.getElementById("leaderboardBtn").onclick = () => {
   location.href = "leaderboard.html";
 };
 
