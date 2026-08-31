@@ -5,108 +5,32 @@
 <title>Teacher Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body {
-  font-family: 'Arial', sans-serif;
-  background: linear-gradient(135deg, #f4f6f8 0%, #e8eff5 100%);
-  margin: 0;
-  padding: 20px;
-}
-h2,h3,h4 {
-  text-align: center;
-  color: #007bff;
-}
-input, button, select {
-  padding: 8px;
-  margin: 5px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-}
-button {
-  background-color: #007bff;
-  color: white;
-  cursor: pointer;
-  transition: 0.3s;
-}
-button:hover {
-  background-color: #0056b3;
-}
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-}
-.section {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  margin: 15px 0;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-}
-#examsList, #studentList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
+body { font-family: 'Arial', sans-serif; background: linear-gradient(135deg, #f4f6f8 0%, #e8eff5 100%); margin: 0; padding: 20px; }
+h2,h3,h4 { text-align: center; color: #007bff; }
+input, button, select { padding: 8px; margin: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+button { background-color: #007bff; color: white; cursor: pointer; transition: 0.3s; }
+button:hover { background-color: #0056b3; }
+.container { max-width: 1100px; margin: 0 auto; }
+.section { background: #fff; border-radius: 12px; padding: 20px; margin: 15px 0; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+#examsList, #studentList { display: flex; flex-wrap: wrap; gap: 12px; }
 .examDiv, #studentList div {
-  flex: 1 1 220px;
-  background: #f9f9f9;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  transition: transform 0.2s;
+  flex: 1 1 220px; background: #f9f9f9; padding: 15px; border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s;
 }
-.examDiv:hover, #studentList div:hover {
-  transform: translateY(-3px);
-}
-#studentDetails {
-  background:#fff;
-  padding:20px;
-  border-radius:12px;
-  margin-top:15px;
-  box-shadow:0 6px 20px rgba(0,0,0,0.1);
-}
-canvas {
-  margin-top: 15px;
-}
-input:focus, select:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 4px rgba(0,123,255,0.3);
-}
-
-/* ================= ENHANCED ANSWER DROPDOWN ================= */
-.questionDiv select.answerSelect {
-  width: 100%;        
-  padding: 10px;      
-  font-size: 16px;    
-  border-radius: 6px; 
-  border: 1px solid #007bff;
-  background: #f0f8ff;
-  margin-top: 5px;
-}
-
-@media(max-width:768px){
-  .examDiv, #studentList div {
-    flex: 1 1 100%;
-  }
-  input, button, select {
-    width: 100%;
-  }
-}
+.examDiv:hover, #studentList div:hover { transform: translateY(-3px); }
+#studentDetails { background:#fff; padding:20px; border-radius:12px; margin-top:15px; box-shadow:0 6px 20px rgba(0,0,0,0.1); }
+canvas { margin-top: 15px; }
+input:focus, select:focus { outline: none; border-color: #007bff; box-shadow: 0 0 4px rgba(0,123,255,0.3); }
+.questionDiv select.answerSelect { width: 100%; padding: 10px; font-size: 16px; border-radius: 6px; border: 1px solid #007bff; background: #f0f8ff; margin-top: 5px; }
+@media(max-width:768px){ .examDiv, #studentList div { flex: 1 1 100%; } input, button, select { width: 100%; } }
 </style>
 </head>
 <body>
 
 <div class="container">
-
 <h2>Teacher Dashboard</h2>
 <button onclick="goToLeaderboard()">🏆 View Leaderboard</button>
 
-<!-- ================= EXAM CREATION ================= -->
 <div class="section">
 <h3>Create Exam</h3>
 <input id="examTitle" placeholder="Exam Title">
@@ -133,7 +57,6 @@ input:focus, select:focus {
 <div id="examsList">Loading exams...</div>
 </div>
 
-<!-- ================= STUDENT REGISTRATION ================= -->
 <div class="section">
 <h3>Register Student</h3>
 <input id="studentName" placeholder="Name with Initials">
@@ -144,37 +67,40 @@ input:focus, select:focus {
 <div id="studentList">Loading students...</div>
 </div>
 
-<!-- ================= STUDENT DETAILS ================= -->
 <div id="studentDetails" style="display:none">
   <h3 id="studentTitle"></h3>
   <div id="studentExams"></div>
   <canvas id="studentChart"></canvas>
 </div>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
-/* Firebase Config */
 const firebaseConfig = {
-  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain:"science-cls.firebaseapp.com",
-  projectId:"science-cls",
-  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
+  apiKey: "AIzaSyAiC22wBDyBitvwXPfgABS4vu0uNMgmZ5c",
+  authDomain: "new-science-5fb45.firebaseapp.com",
+  projectId: "new-science-5fb45",
+  storageBucket: "new-science-5fb45.firebasestorage.app",
+  messagingSenderId: "76803175944",
+  appId: "1:76803175944:web:565258c4210a1ac85003bd",
+  measurementId: "G-9B5QKQF9DY"
 };
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ================= QUESTIONS ================= */
+const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+const secondaryAuth = getAuth(secondaryApp);
+
 window.addQuestion = () => {
-  const d=document.createElement("div");
-  d.className="questionDiv";
-  d.innerHTML=`
+  const d = document.createElement("div");
+  d.className = "questionDiv";
+  d.innerHTML = `
     <input class="questionText" placeholder="Question"><br>
     <input class="option1" placeholder="Option A">
     <input class="option2" placeholder="Option B">
@@ -186,125 +112,137 @@ window.addQuestion = () => {
       <option value="2">C</option>
       <option value="3">D</option>
     </select>`;
-  questionsContainer.appendChild(d);
+  document.getElementById("questionsContainer").appendChild(d);
 };
 
-/* ================= CREATE EXAM ================= */
 window.createExam = async () => {
-  const title=examTitle.value.trim();
-  const duration=Number(examDuration.value);
-  if(!title||!duration) return alert("Enter title & duration");
+  const title = document.getElementById("examTitle").value.trim();
+  const duration = Number(document.getElementById("examDuration").value);
+  if(!title || !duration) return alert("Enter title & duration");
 
-  const questions=[];
-  document.querySelectorAll(".questionDiv").forEach(q=>{
-    const t=q.querySelector(".questionText").value.trim();
-    const o=[
+  const questions = [];
+  document.querySelectorAll(".questionDiv").forEach(q => {
+    const t = q.querySelector(".questionText").value.trim();
+    const o = [
       q.querySelector(".option1").value,
       q.querySelector(".option2").value,
       q.querySelector(".option3").value,
       q.querySelector(".option4").value
     ];
-    const a=Number(q.querySelector(".answerSelect").value);
-    if(t && o.every(v=>v)) questions.push({q:t,options:o,answer:a});
+    const a = Number(q.querySelector(".answerSelect").value);
+    if(t && o.every(v => v)) questions.push({q:t, options:o, answer:a});
   });
   if(!questions.length) return alert("Add at least one question");
 
-  await setDoc(doc(collection(db,"exams")),{
-    title,duration,questions,active:false,createdAt:Date.now()
+  await setDoc(doc(collection(db, "exams")), {
+    title, duration, questions, active: false, createdAt: Date.now()
   });
-  examTitle.value="";
-  examDuration.value="";
+  document.getElementById("examTitle").value = "";
+  document.getElementById("examDuration").value = "";
   loadExams();
 };
 
-/* ================= EXAMS ================= */
-async function loadExams(){
-  examsList.innerHTML="";
-  const snap=await getDocs(collection(db,"exams"));
-  const exams=[];
-  snap.forEach(s=>exams.push({id:s.id,...s.data()}));
-  exams.sort((a,b)=>a.createdAt-b.createdAt);
-  exams.forEach(e=>{
-    const d=document.createElement("div");
-    d.className="examDiv";
-    d.innerHTML=`<span>${e.title} — ${e.active?"🟢 Active":"🔴 Inactive"}</span>
-                 <button>${e.active?"Stop":"Start"}</button>`;
-    d.querySelector("button").onclick=()=>toggleExam(e.id);
+async function loadExams() {
+  const examsList = document.getElementById("examsList");
+  examsList.innerHTML = "";
+  const snap = await getDocs(collection(db, "exams"));
+  const exams = [];
+  snap.forEach(s => exams.push({id: s.id, ...s.data()}));
+  exams.sort((a,b) => a.createdAt - b.createdAt);
+  exams.forEach(e => {
+    const d = document.createElement("div");
+    d.className = "examDiv";
+    d.innerHTML = `<span>${e.title} — ${e.active ? "🟢 Active" : "🔴 Inactive"}</span>
+                 <button>${e.active ? "Stop" : "Start"}</button>`;
+    d.querySelector("button").onclick = () => toggleExam(e.id);
     examsList.appendChild(d);
   });
 }
-async function toggleExam(id){
-  const r=doc(db,"exams",id);
-  const s=await getDoc(r);
-  await updateDoc(r,{active:!s.data().active});
+
+async function toggleExam(id) {
+  const r = doc(db, "exams", id);
+  const s = await getDoc(r);
+  await updateDoc(r, { active: !s.data().active });
   loadExams();
 }
 
-/* ================= STUDENT REGISTRATION ================= */
 window.registerStudent = async () => {
-  const name=studentName.value.trim();
-  let index=studentIndex.value.trim();
-  const password=studentPassword.value;
-  if(!name||!index||!password) return alert("Fill all fields");
-  index=index.replace(/\s+/g,"");
-  const email=`easylearn${index}@example.com`;
+  const name = document.getElementById("studentName").value.trim();
+  let index = document.getElementById("studentIndex").value.trim();
+  const password = document.getElementById("studentPassword").value;
+  if(!name || !index || !password) return alert("Fill all fields");
+  index = index.replace(/\s+/g, "");
+  const email = `easylearn${index}@example.com`;
 
-  const cred=await createUserWithEmailAndPassword(auth,email,password);
-  await setDoc(doc(db,"students",cred.user.uid),{
-    name,index,attempts:{},createdAt:Date.now()
-  });
-
-  studentName.value="";
-  studentIndex.value="";
-  studentPassword.value="";
-  loadStudents();
+  try {
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    await setDoc(doc(db, "students", cred.user.uid), {
+      name, index, attempts: {}, createdAt: Date.now()
+    });
+    secondaryAuth.signOut();
+    document.getElementById("studentName").value = "";
+    document.getElementById("studentIndex").value = "";
+    document.getElementById("studentPassword").value = "";
+    alert("Student registered successfully!");
+    loadStudents();
+  } catch (err) {
+    alert(err.message);
+  }
 };
 
-/* ================= STUDENTS ================= */
-let chart=null;
-let selectedStudentId=null;
-async function loadStudents(){
-  studentList.innerHTML="";
-  const snap=await getDocs(collection(db,"students"));
-  snap.forEach(s=>{
-    const d=document.createElement("div");
-    d.textContent=`${s.data().name} (${s.data().index})`;
-    d.onclick=()=>showStudent(s.id,s.data().name);
+let chart = null;
+let selectedStudentId = null;
+
+async function loadStudents() {
+  const studentList = document.getElementById("studentList");
+  studentList.innerHTML = "";
+  const snap = await getDocs(collection(db, "students"));
+  snap.forEach(s => {
+    const d = document.createElement("div");
+    d.textContent = `${s.data().name} (${s.data().index})`;
+    d.onclick = () => showStudent(s.id, s.data().name);
     studentList.appendChild(d);
   });
 }
 
-/* ================= STUDENT DETAILS (TOGGLE + SORT) ================= */
-async function showStudent(uid,name){
-  if(selectedStudentId===uid){
-    studentDetails.style.display="none";
-    selectedStudentId=null;
+async function showStudent(uid, name) {
+  const studentDetails = document.getElementById("studentDetails");
+  const studentTitle = document.getElementById("studentTitle");
+  const studentExams = document.getElementById("studentExams");
+
+  if(selectedStudentId === uid) {
+    studentDetails.style.display = "none";
+    selectedStudentId = null;
     if(chart) chart.destroy();
     return;
   }
-  selectedStudentId=uid;
-  studentDetails.style.display="block";
-  studentTitle.textContent=name;
-  studentExams.innerHTML="";
+  selectedStudentId = uid;
+  studentDetails.style.display = "block";
+  studentTitle.textContent = name;
+  studentExams.innerHTML = "";
 
-  const stu=await getDoc(doc(db,"students",uid));
-  const attempts=stu.data().attempts||{};
-  const labels=[],scores=[];
+  const stu = await getDoc(doc(db, "students", uid));
+  const attempts = stu.data().attempts || {};
+  const labels = [], scores = [];
 
   const examPromises = Object.keys(attempts).map(async examId => {
-    const ex = await getDoc(doc(db,"exams",examId));
-    if(ex.exists()) return {id:examId,...ex.data(),score:attempts[examId]};
+    const ex = await getDoc(doc(db, "exams", examId));
+    if(ex.exists()) {
+      const rawVal = attempts[examId];
+      const val = (typeof rawVal === 'object' && rawVal !== null) ? rawVal.score : rawVal;
+      return { id: examId, ...ex.data(), score: val };
+    }
     return null;
   });
-  let exams = (await Promise.all(examPromises)).filter(e => e!==null);
-  exams.sort((a,b)=>a.createdAt - b.createdAt);
+  let exams = (await Promise.all(examPromises)).filter(e => e !== null);
+  exams.sort((a,b) => a.createdAt - b.createdAt);
 
-  exams.forEach(ex=>{
-    const total = ex.questions.length;
-    const pct = (ex.score/total)*100;
+  exams.forEach(ex => {
+    const total = ex.questions ? ex.questions.length : 1;
+    const pct = (ex.score / total) * 100;
     labels.push(ex.title);
     scores.push(pct);
-    studentExams.innerHTML+=`
+    studentExams.innerHTML += `
       <div>
         ${ex.title}: ${pct.toFixed(2)}%
         <button onclick="resetAttempt('${uid}','${ex.id}')">Reset Attempt</button>
@@ -312,29 +250,28 @@ async function showStudent(uid,name){
   });
 
   if(chart) chart.destroy();
-  chart = new Chart(studentChart,{
-    type:"line",
-    data:{labels,datasets:[{label:"Percentage",data:scores,borderColor:"#007bff",backgroundColor:"rgba(0,123,255,0.1)"}]},
-    options:{scales:{y:{min:0,max:100}}}
+  const ctx = document.getElementById("studentChart").getContext("2d");
+  chart = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets: [{ label: "Percentage", data: scores, borderColor: "#007bff", backgroundColor: "rgba(0,123,255,0.1)" }] },
+    options: { scales: { y: { min: 0, max: 100 } } }
   });
 }
 
-/* ================= RESET ATTEMPT ================= */
 window.resetAttempt = async (studentId, examId) => {
   if(!confirm("Are you sure you want to reset this attempt?")) return;
-  const stuRef = doc(db,"students",studentId);
+  const stuRef = doc(db, "students", studentId);
   const stuSnap = await getDoc(stuRef);
   const data = stuSnap.data();
-  if(data.attempts && data.attempts[examId]) {
+  if(data.attempts && data.attempts[examId] !== undefined) {
     delete data.attempts[examId];
-    await updateDoc(stuRef,{attempts:data.attempts});
+    await updateDoc(stuRef, { attempts: data.attempts });
     alert("Attempt reset successfully!");
-    showStudent(studentId,data.name);
+    showStudent(studentId, data.name);
   }
-}
+};
 
-/* ================= INIT ================= */
-window.goToLeaderboard=()=>location.href="leaderboard.html";
+window.goToLeaderboard = () => location.href = "leaderboard.html";
 loadExams();
 loadStudents();
 </script>
