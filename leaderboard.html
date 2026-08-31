@@ -2,213 +2,217 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Leaderboard</title>
+<title>Leaderboard | Easy Learn</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body {
-  font-family: 'Arial', sans-serif;
-  background: linear-gradient(135deg, #f4f6f8 0%, #e8eff5 100%);
-  margin: 0;
-  padding: 20px;
-}
-h2 {
-  text-align: center;
-  color: #007bff;
-  margin-bottom: 20px;
-}
-select {
-  display: block;
-  margin: 0 auto 20px auto;
-  padding: 10px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  min-width: 200px;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-}
-th, td {
-  text-align: center;
-  padding: 12px;
-  border-bottom: 1px solid #eee;
-}
-th {
-  background-color: #007bff;
-  color: #fff;
-  font-weight: 600;
-}
-tbody tr:hover {
-  background: #f1f9ff;
-  transform: translateX(5px);
-  transition: 0.2s;
-}
-.rank-1 {
-  background: linear-gradient(90deg, #FFD700, #FFC107);
-  color: #fff;
-  font-weight: bold;
-}
-.rank-2 {
-  background: linear-gradient(90deg, #C0C0C0, #A9A9A9);
-  color: #fff;
-  font-weight: bold;
-}
-.rank-3 {
-  background: linear-gradient(90deg, #cd7f32, #b87333);
-  color: #fff;
-  font-weight: bold;
-}
-.no-results {
-  text-align: center;
-  font-style: italic;
-  color: #555;
-}
-@media(max-width:768px){
-  table, th, td {
-    font-size: 14px;
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #6b73ff, #000dff);
+    min-height: 100vh;
+    padding: 30px 20px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
-}
+  .container {
+    width: 95%;
+    max-width: 850px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+  }
+  .header h1 {
+    font-size: 2rem;
+  }
+  .btn-back {
+    padding: 10px 18px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: bold;
+    backdrop-filter: blur(5px);
+    transition: background 0.3s;
+  }
+  .btn-back:hover {
+    background: rgba(255, 255, 255, 0.4);
+  }
+  .leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    color: #333;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  }
+  .leaderboard-table th {
+    background: #000dff;
+    color: white;
+    padding: 15px;
+    font-size: 1rem;
+    text-align: left;
+  }
+  .leaderboard-table td {
+    padding: 14px 15px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.95rem;
+  }
+  .leaderboard-table tr:hover {
+    background: #f8f9fa;
+  }
+  .rank {
+    font-weight: bold;
+    font-size: 1.1rem;
+    width: 60px;
+    text-align: center;
+  }
+  .top-1 { color: #ffd700; font-size: 1.3rem; }
+  .top-2 { color: #c0c0c0; font-size: 1.3rem; }
+  .top-3 { color: #cd7f32; font-size: 1.3rem; }
+  .loading-text {
+    text-align: center;
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-top: 40px;
+  }
+  @media (max-width: 600px) {
+    .leaderboard-table th, .leaderboard-table td {
+      padding: 10px 8px;
+      font-size: 0.85rem;
+    }
+  }
 </style>
 </head>
 <body>
 
-<h2>Leaderboard</h2>
+<div class="container">
+  <div class="header">
+    <h1>🏆 Leaderboard</h1>
+    <button class="btn-back" onclick="goToDashboard()">⬅ Dashboard</button>
+  </div>
 
-<select id="examSelect"></select>
-
-<table>
-  <thead>
-    <tr>
-      <th>Rank</th>
-      <th>Name</th>
-      <th>Score</th>
-      <th>Percentage</th>
-    </tr>
-  </thead>
-  <tbody id="rows">
-    <tr><td colspan="4" class="no-results">Loading...</td></tr>
-  </tbody>
-</table>
+  <div id="leaderboardContent">
+    <div class="loading-text">Loading student rankings...</div>
+  </div>
+</div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { 
-  getFirestore,
-  collection,
-  getDocs,
-  onSnapshot,
-  query,
-  orderBy
-} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
-/* ---------------- FIREBASE ---------------- */
 const firebaseConfig = {
-  apiKey:"AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-  authDomain:"science-cls.firebaseapp.com",
-  projectId:"science-cls",
-  appId:"1:778012932104:web:f997ad31edac581f0b79bd"
+  apiKey: "AIzaSyAiC22wBDyBitvwXPfgABS4vu0uNMgmZ5c",
+  authDomain: "new-science-5fb45.firebaseapp.com",
+  projectId: "new-science-5fb45",
+  storageBucket: "new-science-5fb45.firebasestorage.app",
+  messagingSenderId: "76803175944",
+  appId: "1:76803175944:web:565258c4210a1ac85003bd",
+  measurementId: "G-9B5QKQF9DY"
 };
+
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ---------------- DOM ---------------- */
-const examSelect = document.getElementById("examSelect");
-const rows = document.getElementById("rows");
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    loadLeaderboard();
+  } else {
+    location.href = "index.html";
+  }
+});
 
-let examsCache = {};
-let unsubscribe = null;
+async function loadLeaderboard() {
+  const container = document.getElementById("leaderboardContent");
+  const snap = await getDocs(collection(db, "students"));
 
-/* ---------------- LOAD EXAMS ---------------- */
-async function loadExams(){
-  examSelect.innerHTML = "";
-  examsCache = {};
+  const rankings = [];
 
-  const q = query(collection(db,"exams"), orderBy("createdAt","desc"));
-  const snap = await getDocs(q);
+  snap.forEach((docSnap) => {
+    const data = docSnap.data();
+    const attempts = data.attempts || {};
 
-  if(snap.empty){
-    examSelect.innerHTML = `<option>No exams</option>`;
-    rows.innerHTML = `<tr><td colspan="4" class="no-results">No exams available</td></tr>`;
+    let totalScore = 0;
+    let totalPctSum = 0;
+    let attemptedCount = 0;
+
+    Object.values(attempts).forEach((attempt) => {
+      totalScore += attempt.score || 0;
+      totalPctSum += attempt.percentage || 0;
+      attemptedCount++;
+    });
+
+    const avgPct = attemptedCount > 0 ? Math.round(totalPctSum / attemptedCount) : 0;
+
+    rankings.push({
+      name: data.name || "Unknown",
+      index: data.index || "N/A",
+      totalScore: totalScore,
+      avgPct: avgPct,
+      examsCount: attemptedCount
+    });
+  });
+
+  rankings.sort((a, b) => b.totalScore - a.totalScore || b.avgPct - a.avgPct);
+
+  if (rankings.length === 0) {
+    container.innerHTML = "<div class='loading-text'>No student data available.</div>";
     return;
   }
 
-  snap.forEach(docSnap=>{
-    const data = docSnap.data();
-    examsCache[docSnap.id] = data;
-
-    const opt = document.createElement("option");
-    opt.value = docSnap.id;
-    opt.textContent = data.title;
-    examSelect.appendChild(opt);
-  });
-
-  examSelect.selectedIndex = 0;
-  loadLeaderboard();
-}
-
-examSelect.addEventListener("change", loadLeaderboard);
-
-/* ---------------- LOAD LEADERBOARD ---------------- */
-function loadLeaderboard(){
-  if(unsubscribe) unsubscribe();
-
-  const examId = examSelect.value;
-  if(!examId) return;
-
-  const totalQuestions = examsCache[examId]?.questions?.length || 1;
-
-  unsubscribe = onSnapshot(collection(db,"students"), snap=>{
-    let list = [];
-
-    snap.forEach(docSnap=>{
-      const d = docSnap.data();
-      let score = 0;
-
-      if(d.attempts && d.attempts[examId]){
-        if(typeof d.attempts[examId] === "number"){
-          score = d.attempts[examId];
-        } else if(typeof d.attempts[examId].score === "number"){
-          score = d.attempts[examId].score;
-        }
-      }
-
-      const percentage = ((score / totalQuestions) * 100).toFixed(2);
-      list.push({ name:d.name, score, percentage });
-    });
-
-    list.sort((a,b)=>b.score - a.score);
-
-    rows.innerHTML = "";
-    if(list.length === 0){
-      rows.innerHTML = `<tr><td colspan="4" class="no-results">No results</td></tr>`;
-      return;
-    }
-
-    list.forEach((s,i)=>{
-      let rankClass = '';
-      if(i===0) rankClass='rank-1';
-      else if(i===1) rankClass='rank-2';
-      else if(i===2) rankClass='rank-3';
-
-      rows.innerHTML += `
-        <tr class="${rankClass}">
-          <td>${i+1}</td>
-          <td>${s.name}</td>
-          <td>${s.score}</td>
-          <td>${s.percentage}%</td>
+  let tableHtml = `
+    <table class="leaderboard-table">
+      <thead>
+        <tr>
+          <th style="text-align:center;">Rank</th>
+          <th>Student Name</th>
+          <th>Index</th>
+          <th>Exams Taken</th>
+          <th>Avg. Score</th>
+          <th>Total Marks</th>
         </tr>
-      `;
-    });
+      </thead>
+      <tbody>
+  `;
+
+  rankings.forEach((student, index) => {
+    let rankBadge = `${index + 1}`;
+    if (index === 0) rankBadge = `<span class="top-1">🥇</span>`;
+    else if (index === 1) rankBadge = `<span class="top-2">🥈</span>`;
+    else if (index === 2) rankBadge = `<span class="top-3">🥉</span>`;
+
+    tableHtml += `
+      <tr>
+        <td class="rank">${rankBadge}</td>
+        <td><strong>${student.name}</strong></td>
+        <td>${student.index}</td>
+        <td>${student.examsCount}</td>
+        <td>${student.avgPct}%</td>
+        <td><strong>${student.totalScore}</strong></td>
+      </tr>
+    `;
   });
+
+  tableHtml += `
+      </tbody>
+    </table>
+  `;
+
+  container.innerHTML = tableHtml;
 }
 
-/* ---------------- INIT ---------------- */
-loadExams();
+window.goToDashboard = () => {
+  location.href = "student-dashboard.html";
+};
 </script>
 
 </body>
