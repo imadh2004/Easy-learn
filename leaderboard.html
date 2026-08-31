@@ -24,7 +24,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
   }
   .header h1 {
     font-size: 2rem;
@@ -43,6 +43,37 @@
   }
   .btn-back:hover {
     background: rgba(255, 255, 255, 0.4);
+  }
+  .controls-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 15px 20px;
+    margin-bottom: 25px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .filter-group label {
+    font-weight: bold;
+    font-size: 0.95rem;
+  }
+  .select-input {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.95rem;
+    outline: none;
+    background: #fff;
+    color: #333;
+    font-weight: bold;
   }
   .leaderboard-table {
     width: 100%;
@@ -84,10 +115,8 @@
     margin-top: 40px;
   }
   @media (max-width: 600px) {
-    .leaderboard-table th, .leaderboard-table td {
-      padding: 10px 8px;
-      font-size: 0.85rem;
-    }
+    .controls-card { flex-direction: column; align-items: stretch; }
+    .leaderboard-table th, .leaderboard-table td { padding: 10px 8px; font-size: 0.85rem; }
   }
 </style>
 </head>
@@ -97,6 +126,23 @@
   <div class="header">
     <h1>🏆 Leaderboard</h1>
     <button class="btn-back" onclick="goToDashboard()">⬅ Dashboard</button>
+  </div>
+
+  <div class="controls-card">
+    <div class="filter-group">
+      <label for="rankingType">View Type:</label>
+      <select id="rankingType" class="select-input">
+        <option value="overall">Overall Leaderboard</option>
+        <option value="examWise">Exam-Wise Leaderboard</option>
+      </select>
+    </div>
+
+    <div class="filter-group" id="examSelectContainer" style="display: none;">
+      <label for="examSelect">Select Exam:</label>
+      <select id="examSelect" class="select-input">
+        <option value="">Loading exams...</option>
+      </select>
+    </div>
   </div>
 
   <div id="leaderboardContent">
@@ -123,29 +169,83 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+let allStudents = [];
+let allExams = [];
+
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    loadLeaderboard();
+    await fetchData();
+    setupEventListeners();
+    renderLeaderboard();
   } else {
     location.href = "index.html";
   }
 });
 
-async function loadLeaderboard() {
-  const container = document.getElementById("leaderboardContent");
-  const snap = await getDocs(collection(db, "students"));
+async function fetchData() {
+  // Fetch Students
+  const stuSnap = await getDocs(collection(db, "students"));
+  allStudents = [];
+  stuSnap.forEach(docSnap => {
+    allStudents.push({ id: docSnap.id, ...docSnap.data() });
+  });
 
+  // Fetch Exams
+  const examSnap = await getDocs(collection(db, "exams"));
+  allExams = [];
+  const examSelect = document.getElementById("examSelect");
+  examSelect.innerHTML = "";
+
+  examSnap.forEach(docSnap => {
+    const data = docSnap.data();
+    allExams.push({ id: docSnap.id, ...data });
+    
+    const option = document.createElement("option");
+    option.value = docSnap.id;
+    option.textContent = data.title;
+    examSelect.appendChild(option);
+  });
+}
+
+function setupEventListeners() {
+  const rankingType = document.getElementById("rankingType");
+  const examSelectContainer = document.getElementById("examSelectContainer");
+  const examSelect = document.getElementById("examSelect");
+
+  rankingType.addEventListener("change", (e) => {
+    if (e.target.value === "examWise") {
+      examSelectContainer.style.display = "flex";
+    } else {
+      examSelectContainer.style.display = "none";
+    }
+    renderLeaderboard();
+  });
+
+  examSelect.addEventListener("change", () => {
+    renderLeaderboard();
+  });
+}
+
+function renderLeaderboard() {
+  const type = document.getElementById("rankingType").value;
+  if (type === "overall") {
+    renderOverallLeaderboard();
+  } else {
+    renderExamWiseLeaderboard();
+  }
+}
+
+function renderOverallLeaderboard() {
+  const container = document.getElementById("leaderboardContent");
   const rankings = [];
 
-  snap.forEach((docSnap) => {
-    const data = docSnap.data();
-    const attempts = data.attempts || {};
-
+  allStudents.forEach(student => {
+    const attempts = student.attempts || {};
     let totalScore = 0;
     let totalPctSum = 0;
     let attemptedCount = 0;
 
-    Object.values(attempts).forEach((attempt) => {
+    Object.values(attempts).forEach(attempt => {
       totalScore += attempt.score || 0;
       totalPctSum += attempt.percentage || 0;
       attemptedCount++;
@@ -154,8 +254,8 @@ async function loadLeaderboard() {
     const avgPct = attemptedCount > 0 ? Math.round(totalPctSum / attemptedCount) : 0;
 
     rankings.push({
-      name: data.name || "Unknown",
-      index: data.index || "N/A",
+      name: student.name || "Unknown",
+      index: student.index || "N/A",
       totalScore: totalScore,
       avgPct: avgPct,
       examsCount: attemptedCount
@@ -165,7 +265,7 @@ async function loadLeaderboard() {
   rankings.sort((a, b) => b.totalScore - a.totalScore || b.avgPct - a.avgPct);
 
   if (rankings.length === 0) {
-    container.innerHTML = "<div class='loading-text'>No student data available.</div>";
+    container.innerHTML = "<div class='loading-text'>No student rankings recorded yet.</div>";
     return;
   }
 
@@ -202,11 +302,76 @@ async function loadLeaderboard() {
     `;
   });
 
-  tableHtml += `
-      </tbody>
-    </table>
+  tableHtml += `</tbody></table>`;
+  container.innerHTML = tableHtml;
+}
+
+function renderExamWiseLeaderboard() {
+  const container = document.getElementById("leaderboardContent");
+  const selectedExamId = document.getElementById("examSelect").value;
+
+  if (!selectedExamId) {
+    container.innerHTML = "<div class='loading-text'>No exam selected or no exams available.</div>";
+    return;
+  }
+
+  const rankings = [];
+
+  allStudents.forEach(student => {
+    const attempts = student.attempts || {};
+    const attempt = attempts[selectedExamId];
+
+    if (attempt) {
+      rankings.push({
+        name: student.name || "Unknown",
+        index: student.index || "N/A",
+        score: attempt.score,
+        totalQuestions: attempt.totalQuestions,
+        percentage: attempt.percentage,
+        submittedAt: attempt.submittedAt
+      });
+    }
+  });
+
+  rankings.sort((a, b) => b.score - a.score || b.percentage - a.percentage);
+
+  if (rankings.length === 0) {
+    container.innerHTML = "<div class='loading-text'>No students have completed this exam yet.</div>";
+    return;
+  }
+
+  let tableHtml = `
+    <table class="leaderboard-table">
+      <thead>
+        <tr>
+          <th style="text-align:center;">Rank</th>
+          <th>Student Name</th>
+          <th>Index</th>
+          <th>Score</th>
+          <th>Percentage</th>
+        </tr>
+      </thead>
+      <tbody>
   `;
 
+  rankings.forEach((student, index) => {
+    let rankBadge = `${index + 1}`;
+    if (index === 0) rankBadge = `<span class="top-1">🥇</span>`;
+    else if (index === 1) rankBadge = `<span class="top-2">🥈</span>`;
+    else if (index === 2) rankBadge = `<span class="top-3">🥉</span>`;
+
+    tableHtml += `
+      <tr>
+        <td class="rank">${rankBadge}</td>
+        <td><strong>${student.name}</strong></td>
+        <td>${student.index}</td>
+        <td>${student.score} / ${student.totalQuestions}</td>
+        <td><strong>${student.percentage}%</strong></td>
+      </tr>
+    `;
+  });
+
+  tableHtml += `</tbody></table>`;
   container.innerHTML = tableHtml;
 }
 
