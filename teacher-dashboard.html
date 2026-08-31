@@ -61,7 +61,7 @@ input:focus, select:focus { outline: none; border-color: #007bff; box-shadow: 0 
 <h3>Register Student</h3>
 <input id="studentName" placeholder="Name with Initials">
 <input id="studentIndex" placeholder="Index Number">
-<input id="studentPassword" type="password" placeholder="Password">
+<input id="studentPassword" type="password" placeholder="Password (min 6 characters)">
 <button onclick="registerStudent()">➕ Add Student</button>
 <h4>Students</h4>
 <div id="studentList">Loading students...</div>
@@ -76,7 +76,7 @@ input:focus, select:focus { outline: none; border-color: #007bff; box-shadow: 0 
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { initializeApp, getApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
 import { getFirestore, collection, getDocs, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
@@ -94,8 +94,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
-const secondaryAuth = getAuth(secondaryApp);
+// Initialize isolated Secondary Auth Instance safely
+let secondaryAuth;
+try {
+  const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+  secondaryAuth = getAuth(secondaryApp);
+} catch (e) {
+  const secondaryApp = getApp("SecondaryApp");
+  secondaryAuth = getAuth(secondaryApp);
+}
 
 window.addQuestion = () => {
   const d = document.createElement("div");
@@ -170,23 +177,33 @@ window.registerStudent = async () => {
   const name = document.getElementById("studentName").value.trim();
   let index = document.getElementById("studentIndex").value.trim();
   const password = document.getElementById("studentPassword").value;
-  if(!name || !index || !password) return alert("Fill all fields");
+  
+  if(!name || !index || !password) return alert("Please fill out all fields.");
+  if(password.length < 6) return alert("Password must be at least 6 characters long.");
+
   index = index.replace(/\s+/g, "");
   const email = `easylearn${index}@example.com`;
 
   try {
+    // Register student with secondary auth so teacher stays logged in
     const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    
+    // Write student details to Firestore using the primary app db instance
     await setDoc(doc(db, "students", cred.user.uid), {
       name, index, attempts: {}, createdAt: Date.now()
     });
-    secondaryAuth.signOut();
+    
+    await secondaryAuth.signOut();
+    
     document.getElementById("studentName").value = "";
     document.getElementById("studentIndex").value = "";
     document.getElementById("studentPassword").value = "";
+    
     alert("Student registered successfully!");
     loadStudents();
   } catch (err) {
-    alert(err.message);
+    console.error("Student Registration Error:", err);
+    alert(`Error: ${err.message}`);
   }
 };
 
