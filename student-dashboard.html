@@ -4,195 +4,186 @@
 <meta charset="UTF-8">
 <title>Student Dashboard | Easy Learn</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
-  * { box-sizing: border-box; margin:0; padding:0; }
-  body {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #6b73ff, #000dff);
-    min-height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    color:#fff;
-  }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f9;
+  color: #333;
+  padding: 20px;
+}
+.header {
+  max-width: 900px;
+  margin: 0 auto 20px auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+.header h2 { color: #6b73ff; font-size: 1.5rem; }
+.nav-btns { display: flex; gap: 10px; }
+button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #6b73ff;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+button:hover { background: #000dff; }
+.logout-btn { background: #dc3545; }
+.logout-btn:hover { background: #bd2130; }
 
-  .container {
-    width: 95%;
-    max-width: 900px;
-    text-align: center;
-  }
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.card {
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+}
+.card h3 { margin-bottom: 15px; color: #333; }
 
-  h1 {
-    margin-bottom: 10px;
-    font-size: 2.2rem;
-  }
-
-  h2 {
-    margin-bottom: 30px;
-    font-size: 1.5rem;
-    opacity: 0.9;
-  }
-
-  p {
-    margin-bottom: 30px;
-    opacity: 0.9;
-  }
-
-  .cards {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 25px;
-  }
-
-  .card {
-    background: white;
-    color: #000;
-    width: 220px;
-    padding: 30px 20px;
-    border-radius: 15px;
-    cursor: pointer;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    transition: transform 0.3s, box-shadow 0.3s;
-    position: relative;
-  }
-
-  .card:hover {
-    transform: translateY(-6px) scale(1.05);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.4);
-  }
-
-  .card h2 {
-    margin-top: 10px;
-    font-size: 1.4rem;
-  }
-
-  .card p {
-    margin-top: 8px;
-    font-size: 0.95rem;
-    color: #555;
-  }
-
-  /* Arrow */
-  .card::after {
-    content: "➔";
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.5rem;
-    color: #6b73ff;
-    transition: transform 0.3s;
-  }
-
-  .card:hover::after {
-    transform: translateY(-50%) translateX(5px);
-  }
-
-  /* Logout button */
-  .logout {
-    margin-top: 40px;
-  }
-
-  .logout button {
-    padding: 10px 25px;
-    font-size: 1rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background: #ff4d4d;
-    color: white;
-    transition: background 0.3s;
-  }
-
-  .logout button:hover {
-    background: #cc0000;
-  }
-
-  @media (max-width: 600px) {
-    h1 { font-size: 1.8rem; }
-    h2 { font-size: 1.2rem; }
-    .cards { flex-direction: column; }
-    .card { width: 85%; margin: auto; }
-  }
+.exam-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border-left: 5px solid #6b73ff;
+}
+.exam-item h4 { font-size: 1.1rem; margin-bottom: 4px; }
+.exam-item p { font-size: 0.85rem; color: #666; }
+.btn-start { background: #28a745; }
+.btn-start:hover { background: #218838; }
+.btn-disabled { background: #6c757d; cursor: not-allowed; }
+.btn-disabled:hover { background: #6c757d; }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>Welcome to Easy Learn</h1>
-  <h2 id="studentName">Loading...</h2>
-  <p>Select an option to continue</p>
-
-  <div class="cards">
-    <div class="card" onclick="goToExams()">
-      📝
-      <h2>Exams</h2>
-      <p>View and attempt available exams</p>
-    </div>
-
-    <div class="card" onclick="goToLeaderboard()">
-      🏆
-      <h2>Leaderboard</h2>
-      <p>Check your ranking & performance</p>
-    </div>
-
-    <div class="card" onclick="goToMyResults()">
-      📊
-      <h2>My Results</h2>
-      <p>View all your exam results</p>
-    </div>
+<div class="header">
+  <div>
+    <h2 id="welcomeText">Welcome Student</h2>
+    <p id="studentIndexText" style="color: #666; font-size: 0.9rem;"></p>
   </div>
+  <div class="nav-btns">
+    <button onclick="location.href='my-results.html'">📊 My Results</button>
+    <button onclick="location.href='leaderboard.html'">🏆 Leaderboard</button>
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+  </div>
+</div>
 
-  <div class="logout">
-    <button onclick="logout()">Logout</button>
+<div class="container">
+  <div class="card">
+    <h3>Available Active Exams</h3>
+    <div id="examsList">Loading active exams...</div>
   </div>
 </div>
 
 <script type="module">
-  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyACtMRuTNPVqk15KUebcCccrqESv9hFEgE",
-    authDomain: "science-cls.firebaseapp.com",
-    projectId: "science-cls",
-    storageBucket: "science-cls.appspot.com",
-    messagingSenderId: "778012932104",
-    appId: "1:778012932104:web:f997ad31edac581f0b79bd"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyAiC22wBDyBitvwXPfgABS4vu0uNMgmZ5c",
+  authDomain: "new-science-5fb45.firebaseapp.com",
+  projectId: "new-science-5fb45",
+  storageBucket: "new-science-5fb45.firebasestorage.app",
+  messagingSenderId: "76803175944",
+  appId: "1:76803175944:web:565258c4210a1ac85003bd",
+  measurementId: "G-9B5QKQF9DY"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-  const studentNameElem = document.getElementById("studentName");
+let currentUser = null;
+let studentData = null;
 
-  // Show logged-in student name
-  onAuthStateChanged(auth, async user => {
-    if(!user) {
-      window.location.href = "index.html";
-      return;
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    const stuDoc = await getDoc(doc(db, "students", user.uid));
+    if (stuDoc.exists()) {
+      studentData = stuDoc.data();
+      document.getElementById("welcomeText").textContent = `Welcome, ${studentData.name}`;
+      document.getElementById("studentIndexText").textContent = `Index: ${studentData.index}`;
+      loadActiveExams();
+    } else {
+      alert("Student profile not found.");
+      signOut(auth);
     }
-    const uid = user.uid;
-    const studentSnap = await getDoc(doc(db,"students",uid));
-    if(studentSnap.exists()){
-      const data = studentSnap.data();
-      studentNameElem.textContent = data.name;
+  } else {
+    location.href = "index.html";
+  }
+});
+
+async function loadActiveExams() {
+  const container = document.getElementById("examsList");
+  container.innerHTML = "";
+
+  const snap = await getDocs(collection(db, "exams"));
+  const activeExams = [];
+  
+  snap.forEach(docSnap => {
+    const data = docSnap.data();
+    if (data.active) {
+      activeExams.push({ id: docSnap.id, ...data });
     }
   });
 
-  window.goToExams = () => { window.location.href = "student-exams.html"; };
-  window.goToLeaderboard = () => { window.location.href = "leaderboard.html"; };
-  window.goToMyResults = () => { window.location.href = "my-results.html"; };
+  if (activeExams.length === 0) {
+    container.innerHTML = "<p style='color: #777;'>No active exams currently available.</p>";
+    return;
+  }
 
-  window.logout = async () => {
-    await signOut(auth);
-    window.location.href = "index.html";
-  };
+  const attempts = studentData.attempts || {};
+
+  activeExams.forEach(exam => {
+    const hasAttempted = attempts[exam.id] !== undefined;
+    
+    const div = document.createElement("div");
+    div.className = "exam-item";
+    
+    div.innerHTML = `
+      <div>
+        <h4>${exam.title}</h4>
+        <p>⏱ Duration: ${exam.duration} Minutes | ❓ Questions: ${exam.questions ? exam.questions.length : 0}</p>
+      </div>
+      <div>
+        ${
+          hasAttempted 
+          ? `<button class="btn-disabled" disabled>Completed</button>`
+          : `<button class="btn-start" onclick="startExam('${exam.id}')">Start Exam</button>`
+        }
+      </div>
+    `;
+    
+    container.appendChild(div);
+  });
+}
+
+window.startExam = (examId) => {
+  localStorage.setItem("currentExamId", examId);
+  location.href = "student-exams.html";
+};
+
+document.getElementById("logoutBtn").onclick = () => {
+  signOut(auth).then(() => location.href = "index.html");
+};
 </script>
-
 </body>
 </html>
