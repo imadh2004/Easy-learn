@@ -113,7 +113,7 @@ const db = getFirestore(app);
 
 const examId = localStorage.getItem("currentExamId");
 let currentStudent = null;
-let examData = null;
+let examQuestions = [];
 let timerInterval = null;
 
 if (!examId) {
@@ -150,33 +150,50 @@ async function loadExamDetails() {
     return;
   }
 
-  examData = examDoc.data();
-  document.getElementById("examTitle").textContent = examData.title;
+  const rawData = examDoc.data();
+  document.getElementById("examTitle").textContent = rawData.title || "Exam";
 
-  renderQuestions(examData.questions || []);
-  startTimer(parseInt(examData.duration) * 60);
+  // Parse questions whether they are stored as array 'questions' or directly as keys (0, 1, 2...)
+  examQuestions = [];
+  if (Array.isArray(rawData.questions)) {
+    examQuestions = rawData.questions;
+  } else {
+    Object.keys(rawData).forEach(key => {
+      if (!isNaN(key) && typeof rawData[key] === "object") {
+        examQuestions.push(rawData[key]);
+      }
+    });
+  }
+
+  renderQuestions(examQuestions);
+  
+  const duration = rawData.duration ? parseInt(rawData.duration) : 30;
+  startTimer(duration * 60);
 }
 
 function renderQuestions(questions) {
   const container = document.getElementById("questionsContainer");
   container.innerHTML = "";
 
-  questions.forEach((q, index) => {
+  questions.forEach((qObj, index) => {
     const div = document.createElement("div");
     div.className = "question-block";
 
+    const questionText = qObj.q || qObj.question || `Question ${index + 1}`;
+    const options = qObj.options || [];
+
     let optionsHtml = "";
-    q.options.forEach((opt, optIdx) => {
+    options.forEach((optText, optIdx) => {
       optionsHtml += `
         <label class="option">
           <input type="radio" name="q_${index}" value="${optIdx}" required>
-          ${opt}
+          ${optText}
         </label>
       `;
     });
 
     div.innerHTML = `
-      <div class="question-title">Q${index + 1}: ${q.question}</div>
+      <div class="question-title">Q${index + 1}: ${questionText}</div>
       ${optionsHtml}
     `;
     container.appendChild(div);
@@ -213,37 +230,36 @@ async function submitExam() {
   document.getElementById("submitBtn").disabled = true;
   document.getElementById("submitBtn").textContent = "Submitting...";
 
-  const questions = examData.questions || [];
   let score = 0;
 
-  questions.forEach((q, index) => {
+  examQuestions.forEach((qObj, index) => {
     const selected = document.querySelector(`input[name="q_${index}"]:checked`);
     if (selected) {
-      const selectedValue = Number(selected.value);
+      const selectedIndex = Number(selected.value);
       
-      // Supports 0-based index (0, 1, 2, 3) and 1-based index (1, 2, 3, 4) schema types
-      let correctVal = q.correctIndex !== undefined ? Number(q.correctIndex) : Number(q.correct);
-      
-      if (selectedValue === correctVal) {
+      // Reads 'answer' key from Firestore map
+      const correctAnswer = qObj.answer !== undefined ? Number(qObj.answer) : Number(qObj.correctIndex);
+
+      if (selectedIndex === correctAnswer) {
         score++;
       }
     }
   });
 
-  const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
+  const percentage = examQuestions.length > 0 ? Math.round((score / examQuestions.length) * 100) : 0;
 
   try {
     const studentRef = doc(db, "students", currentStudent.uid);
     await updateDoc(studentRef, {
       [`attempts.${examId}`]: {
         score: score,
-        totalQuestions: questions.length,
+        totalQuestions: examQuestions.length,
         percentage: percentage,
         submittedAt: Date.now()
       }
     });
 
-    alert(`Exam Submitted! Your score: ${score}/${questions.length} (${percentage}%)`);
+    alert(`Exam Submitted! Your score: ${score}/${examQuestions.length} (${percentage}%)`);
     location.href = "my-results.html";
   } catch (err) {
     alert("Error saving exam result: " + err.message);
